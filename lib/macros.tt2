@@ -1,0 +1,10 @@
+[% MACRO TeX(expr,size) PERL %]
+	use MIME::Base64 "encode_base64";
+	my $size = $stash->get('size'); # never undef
+	$size = 3 if (!$size and $size ne '0');
+	open my $mt, "-|:raw",
+		"mimetex", "-d", "-o", "-s", $size, $stash->get('expr')
+		or die "mimetex: $!";
+	my $gif = do {local $/; <$mt>};
+	print '<img src="data:image/gif;base64,'.encode_base64($gif,'').'">';
+[% END %]

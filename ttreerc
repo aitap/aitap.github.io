@@ -1,0 +1,16 @@
+#!/usr/bin/ttree -f
+verbose 
+recurse
+colour
+eval_perl
+#strict # FIXME
+
+accept = \.tt2$
+suffix tt2=html
+
+src = src
+lib = lib
+dest = .
+
+wrapper = page.tt2
+depend *=macros.tt2
