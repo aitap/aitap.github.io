@@ -1,4 +1,4 @@
-[% MACRO TeX(expr,big) PERL %]
+[%~ MACRO TeX(expr,big) PERL ~%]
 	use MIME::Base64 "encode_base64";
 	open my $mt, "-|:raw",
 		"mimetex", "-d", "-o", "-s",
@@ -7,3 +7,21 @@
 	my $gif = do {local $/; <$mt>};
 	print '<img src="data:image/gif;base64,'.encode_base64($gif,'').'">';
 [% END %]
+[%~ BLOCK code ~%][%~ PERL ~%]
+	use IPC::Open2;
+	my $pid = open2
+		my $sout, my $sin,
+		qw(highlight -O html -i /dev/stdin -o /dev/stdout -S),
+		$stash->get('lang'),
+		qw(--inline-css -f);
+	
+	print $sin $stash->get('content');
+	close $sin;
+
+	print
+		'==<pre>',
+		do {local $/; <$sout>},
+		'</pre>==';
+	close $sout;
+	waitpid( $pid, 0 );
+[% END %][% END %]
