@@ -1,1 +1,34 @@
-[% title = 'Perhaps I should start a blog' %]
+[%~ title = 'Perhaps I should start a blog' ~%]
+
+[%~ PERL ~%]
+# Okay, this is really stupid
+
+my $t = Template::->new(
+	INCLUDE_PATH => [qw(src lib)],
+	STRICT => 1,
+	EVAL_PERL => 1,
+);
+
+$stash->set(
+	articles => [
+		map {
+			my %vars;
+			s{^src/}{};
+			my ($y, $m, $d) = m{^(\d{4})/(\d\d)/(\d\d)/};
+			my $st = $t->context->localise();
+			$t->context->process($_, \%vars);
+			s/\.tt2$/.html/;
+			{
+				date => "$y-$m-$d",
+				title => $t->context->stash->get('title'),
+				path => $_,
+			}
+		} glob("src/*/*/*/*.tt2")
+	]
+);
+
+[% END %]
+
+[% FOREACH a IN articles.sort('date').reverse %]
+* ["[% a.date %] - [% a.title | html %]":./[% a.path | url %]]
+[% END %]

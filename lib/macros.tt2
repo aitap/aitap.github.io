@@ -2,7 +2,7 @@
 	use MIME::Base64 "encode_base64";
 	open my $mt, "-|:raw",
 		"mimetex", "-d", "-o", "-s",
-		$stash->get('big') ? 5 : 3, $stash->get('expr')
+		eval { $stash->get('big') } ? 5 : 3, $stash->get('expr')
 		or die "mimetex: $!";
 	my $gif = do {local $/; <$mt>};
 	print '<img src="data:image/gif;base64,'.encode_base64($gif,'').'">';
