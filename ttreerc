@@ -13,4 +13,6 @@ lib = lib
 dest = .
 
 wrapper = page.tt2
+
+depend index.tt2=*
 depend *=macros.tt2

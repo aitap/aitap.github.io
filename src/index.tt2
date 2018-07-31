@@ -29,6 +29,6 @@ $stash->set(
 
 [% END %]
 
-[% FOREACH a IN articles.sort('date').reverse %]
+[%~ FOREACH a IN articles.sort('date').reverse ~%]
 * ["[% a.date %] - [% a.title | html %]":./[% a.path | url %]]
 [% END %]
