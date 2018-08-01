@@ -1,0 +1,106 @@
+[% PROCESS macros.tt2 %]
+[% title = 'Installing Skype 8 for Linux on 32-bit Debian 9 "Stretch"' %]
+
+First things first, there are no miracles: you still need a 64-bit processor to run @skypeforlinux64.deb@. In fact, quite a lot of code we're going to install is going to be 64-bit, so let's get started:
+
+[% WRAPPER code, lang = 'bash' %]
+# Enable multiarch to allow installing non-i386 packages
+dpkg --add-architecture amd64
+apt update
+# Install the 64-bit kernel to run both 32-bit and 64-bit binaries
+apt install linux-image-amd64
+[% END %]
+
+Now reboot into the new kernel (make sure of that in the bootloader menu). Make sure that everything works because we're going to use only @amd64@ kernel from now on.
+
+[% WRAPPER code, lang = 'bash' %]
+# This part is optional, but doing this ensures that amd64 kernel is going to be default in GRUB menu
+apt purge linux-{image,headers}*686-pae
+apt --purge autoremove
+[% END %]
+
+Now we can just install the 64-bit package, right?
+
+[% WRAPPER code, lang = 'bash' %]
+# Commented-out code may break your system
+# dpkg -i .../path/to/skypeforlinux64.deb
+# apt-get install -f
+[% END %]
+
+If you run the above commands, you'll find out that @apt@ suggests you to wipe half of the package management system (but has enough courtesy to warn you that it may not be the right thing to do, so can you please type that you know what you are doing first?)
+
+What the hell?
+
+# @skypeforlinux@ depends on @apt-transport-https@.
+# @apt-transport-https@ does *not* have @Multi-Arch@ field in its description. Therefore, it gets pre-multiarch behaviour,
+
+bq. The package is not co-installable and it must not be used to satisfy the dependency of any package of another architecture than its own.
+
+<ol start="3">
+
+<li>@skypeforlinux:amd64@ tries to pull @apt-transport-https:amd64@, which conflicts with @apt-transport-https:i386@ and the rest of APT.</li>
+<li>Hillarity ensures.</li>
+
+</ol>
+
+But that's nonsense, you'd say. (At least, I would.) @apt-trasport-https@ provides, basically, a single executable, @/usr/lib/apt/methods/https@, which can be called by 32-bit APT to download whatever APT wants to download via HTTPS. There is no reason for it to be a 64-bit executable on a (mostly) 32-bit system. Can we ask APT to keep the 32-bit version?
+
+Almost.
+
+The "Multiarch specification":https://wiki.ubuntu.com/MultiarchSpec says:
+
+bq. If a package is declared @Multi-Arch: foreign@, preference should be given to a package for the native architecture if available; if it is not available, the package manager may automatically install any available package, regardless of architecture, or it may choose to make this an option controlled by user configuration. <br>
+The package is not co-installable and _should be allowed to satisfy the dependencies of a package of another architecture than its own_.
+
+If you feel your tinker-fu high today, you can try to:
+
+# Take the original @apt-transport-https_VERSION_i386.deb@
+# Use @ar@ to extract @control.tar.gz@
+# Extract @./control@ from @control.tar.gz@
+# Patch in the missing line and increment the version while you're at it
+# Try to fit the guts back before abyone notices
+# Install the resulting package
+
+Perhaps it even could work. But we're building our own version of @apt-transport-https@ from source, just for the sake of one line in the package description. Silly, I know.
+
+[% WRAPPER code, lang = 'bash' %]
+# Install the packages required to build APT and then some
+apt-get build-dep apt devscripts
+# Create an empty directory to work in
+cd $(mktemp -d ./apt-XXX)
+# Download the apt source code
+apt-get source apt # I wanted to sneak a GEB reference here, but, well, here it is
+# Change directory to the source code itself
+cd apt-*
+# Insert the missing line in the description of apt-transport-https
+sed -i '/^Package: apt-transport-https$/aMulti-Arch: foreign' debian/control
+# Increment the version in the changelog so that the original from the repo
+# wouldn't override the locally patched package next time you run apt upgrade
+dch --local='multiarch' "Mark the package as multi-arch foreign to satisfy skype dependencies"
+# dch will warn you that the current directory has been renamed,
+# so let's change into it to avoid confusion
+cd ../apt-*
+# Build the packages. ALL OF THEM!
+dpkg-buildpackage -uc -us
+[% END %]
+
+Go grab a cup of coffee. (Or, preferrably, something without any caffeine, because your pulse must be racing from stress at this point.) APT is written in C++ and contains a lot of translation strings, so don't expect the build process to be done instantaneously.
+
+Is it done yet? On my machine the build process additionally warned about some translations not being good enough and then crashed because of missing @usr/share/man/*/*/apt-something-something.*@. Notice the double @*/*/@: those must have been the translated man pages. I had to remove the offending lines from @debian/*.install@. It's not like I'm even going to install those packages: I just need the patched @apt-transport-https@. After I applied the fix, I ran @fakeroot debian/rules binary@ to restart the process from approximately where it stopped at.
+
+Is it done now? Finally, you can install the multi-arch-aware @apt-transport-https@:
+
+[% WRAPPER code, lang = 'bash' %]
+dpkg -i ../apt-transport-https*.deb
+[% END %]
+
+Then install Skype and its dependencies:
+
+[% WRAPPER code, lang = 'bash' %]
+dpkg -i .../path/to/skypeforlinux64.deb
+apt-get install -f
+[% END %]
+
+Assuming that our @apt-transport-https@ is patched properly, installing Skype now should *not* break the system.
+
+Enjoy your calls! Until the next APT update, that is...

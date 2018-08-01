@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1"> <!-- stupid mobile browsers -->
+		<title>Installing Skype 8 for Linux on 32-bit Debian 9 "Stretch"</title>
+		<style>
+			.center {
+				text-align: center;
+				display: block;
+				margin-left: auto;
+				margin-right: auto;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Installing Skype 8 for Linux on 32-bit Debian 9 "Stretch"</h1>
+		<div class="content">
+			<p>First things first, there are no miracles: you still need a 64-bit processor to run <code>skypeforlinux64.deb</code>. In fact, quite a lot of code we&#39;re going to install is going to be 64-bit, so let&#39;s get started:</p>
+
+
+
+<pre>
+<span style="color:#838183; font-style:italic"># Enable multiarch to allow installing non-i386 packages</span>
+dpkg <span style="color:#000000">--</span>add-architecture amd64
+apt update
+<span style="color:#838183; font-style:italic"># Install the 64-bit kernel to run both 32-bit and 64-bit binaries</span>
+apt <span style="color:#000000; font-weight:bold">install</span> linux-image-amd64
+</pre>
+
+
+
+<p>Now reboot into the new kernel (make sure of that in the bootloader menu). Make sure that everything works because we&#39;re going to use only <code>amd64</code> kernel from now on.</p>
+
+
+
+<pre>
+<span style="color:#838183; font-style:italic"># This part is optional, but doing this ensures that amd64 kernel is going to be default in GRUB menu</span>
+apt purge linux-<span style="color:#000000">{</span>image<span style="color:#000000">,</span>headers<span style="color:#000000">}*</span><span style="color:#b07e00">686</span><span style="color:#000000">-</span>pae
+apt <span style="color:#000000">--</span>purge autoremove
+</pre>
+
+
+
+<p>Now we can just install the 64-bit package, right?</p>
+
+
+
+<pre>
+<span style="color:#838183; font-style:italic"># Commented-out code may break your system</span>
+<span style="color:#838183; font-style:italic"># dpkg -i .../path/to/skypeforlinux64.deb</span>
+<span style="color:#838183; font-style:italic"># apt-get install -f</span>
+</pre>
+
+
+
+<p>If you run the above commands, you&#39;ll find out that <code>apt</code> suggests you to wipe half of the package management system (but has enough courtesy to warn you that it may not be the right thing to do, so can you please type that you know what you are doing first?)</p>
+
+<p>What the hell?</p>
+
+<ol>
+<li><code>skypeforlinux</code> depends on <code>apt-transport-https</code>.</li>
+<li><code>apt-transport-https</code> does <strong>not</strong> have <code>Multi-Arch</code> field in its description. Therefore, it gets pre-multiarch behaviour,</li>
+</ol>
+
+<blockquote><p>The package is not co-installable and it must not be used to satisfy the dependency of any package of another architecture than its own.</p></blockquote>
+
+<ol start="3">
+
+<li><code>skypeforlinux:amd64</code> tries to pull <code>apt-transport-https:amd64</code>, which conflicts with <code>apt-transport-https:i386</code> and the rest of APT.</li>
+<li>Hillarity ensures.</li>
+
+</ol>
+
+<p>But that&#39;s nonsense, you&#39;d say. (At least, I would.) <code>apt-trasport-https</code> provides, basically, a single executable, <code>/usr/lib/apt/methods/https</code>, which can be called by 32-bit APT to download whatever APT wants to download via HTTPS. There is no reason for it to be a 64-bit executable on a (mostly) 32-bit system. Can we ask APT to keep the 32-bit version?</p>
+
+<p>Almost.</p>
+
+<p>The <a href="https://wiki.ubuntu.com/MultiarchSpec">Multiarch specification</a> says:</p>
+
+<blockquote><p>If a package is declared <code>Multi-Arch: foreign</code>, preference should be given to a package for the native architecture if available; if it is not available, the package manager may automatically install any available package, regardless of architecture, or it may choose to make this an option controlled by user configuration. <br><br>
+The package is not co-installable and <em>should be allowed to satisfy the dependencies of a package of another architecture than its own</em>.</p></blockquote>
+
+<p>If you feel your tinker-fu high today, you can try to:</p>
+
+<ol>
+<li>Take the original <code>apt-transport-https_VERSION_i386.deb</code></li>
+<li>Use <code>ar</code> to extract <code>control.tar.gz</code></li>
+<li>Extract <code>./control</code> from <code>control.tar.gz</code></li>
+<li>Patch in the missing line and increment the version while you&#39;re at it</li>
+<li>Try to fit the guts back before abyone notices</li>
+<li>Install the resulting package</li>
+</ol>
+
+<p>Perhaps it even could work. But we&#39;re building our own version of <code>apt-transport-https</code> from source, just for the sake of one line in the package description. Silly, I know.</p>
+
+
+
+<pre>
+<span style="color:#838183; font-style:italic"># Install the packages required to build APT and then some</span>
+apt-get build-dep apt devscripts
+<span style="color:#838183; font-style:italic"># Create an empty directory to work in</span>
+<span style="color:#0057ae">cd</span> $<span style="color:#000000">(</span>mktemp <span style="color:#000000">-</span>d .<span style="color:#000000">/</span>apt-XXX<span style="color:#000000">)</span>
+<span style="color:#838183; font-style:italic"># Download the apt source code</span>
+apt-get <span style="color:#0057ae">source</span> apt <span style="color:#838183; font-style:italic"># I wanted to sneak a GEB reference here, but, well, here it is</span>
+<span style="color:#838183; font-style:italic"># Change directory to the source code itself</span>
+<span style="color:#0057ae">cd</span> apt-<span style="color:#000000">*</span>
+<span style="color:#838183; font-style:italic"># Insert the missing line in the description of apt-transport-https</span>
+<span style="color:#000000; font-weight:bold">sed</span> <span style="color:#000000">-</span>i <span style="color:#bf0303">'/^Package: apt-transport-https$/aMulti-Arch: foreign'</span> debian<span style="color:#000000">/</span>control
+<span style="color:#838183; font-style:italic"># Increment the version in the changelog so that the original from the repo</span>
+<span style="color:#838183; font-style:italic"># wouldn't override the locally patched package next time you run apt upgrade</span>
+dch <span style="color:#000000">--</span><span style="color:#0057ae">local</span><span style="color:#000000">=</span><span style="color:#bf0303">'multiarch'</span> <span style="color:#bf0303">&quot;Mark the package as multi-arch foreign to satisfy skype dependencies&quot;</span>
+<span style="color:#838183; font-style:italic"># dch will warn you that the current directory has been renamed,</span>
+<span style="color:#838183; font-style:italic"># so let's change into it to avoid confusion</span>
+<span style="color:#0057ae">cd</span> ..<span style="color:#000000">/</span>apt-<span style="color:#000000">*</span>
+<span style="color:#838183; font-style:italic"># Build the packages. ALL OF THEM!</span>
+dpkg-buildpackage <span style="color:#000000">-</span>uc <span style="color:#000000">-</span>us
+</pre>
+
+
+
+<p>Go grab a cup of coffee. (Or, preferrably, something without any caffeine, because your pulse must be racing from stress at this point.) APT is written in C++ and contains a lot of translation strings, so don&#39;t expect the build process to be done instantaneously.</p>
+
+<p>Is it done yet? On my machine the build process additionally warned about some translations not being good enough and then crashed because of missing <code>usr/share/man/*/*/apt-something-something.*</code>. Notice the double <code>*/*/</code>: those must have been the translated man pages. I had to remove the offending lines from <code>debian/*.install</code>. It&#39;s not like I&#39;m even going to install those packages: I just need the patched <code>apt-transport-https</code>. After I applied the fix, I ran <code>fakeroot debian/rules binary</code> to restart the process from approximately where it stopped at.</p>
+
+<p>Is it done now? Finally, you can install the multi-arch-aware <code>apt-transport-https</code>:</p>
+
+
+
+<pre>
+dpkg <span style="color:#000000">-</span>i ..<span style="color:#000000">/</span>apt-transport-https<span style="color:#000000">*</span>.deb
+</pre>
+
+
+
+<p>Then install Skype and its dependencies:</p>
+
+
+
+<pre>
+dpkg <span style="color:#000000">-</span>i ...<span style="color:#000000">/</span>path<span style="color:#000000">/</span>to<span style="color:#000000">/</span>skypeforlinux64.deb
+apt-get <span style="color:#000000; font-weight:bold">install</span> <span style="color:#000000">-</span>f
+</pre>
+
+
+
+<p>Assuming that our <code>apt-transport-https</code> is patched properly, installing Skype now should <strong>not</strong> break the system.</p>
+
+<p>Enjoy your calls! Until the next APT update, that is...</p>
+		</div>
+		<hr>
+		Unless otherwise specified, contents of this blog are covered by <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> license (or a later version).
+	</body>
+</html>
