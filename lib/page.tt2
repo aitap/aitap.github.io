@@ -1,3 +1,4 @@
+[%~ SET global.content = content ~%]
 <!doctype html>
 <html>
 	<head>
