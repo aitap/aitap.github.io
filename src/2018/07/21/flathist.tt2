@@ -3,7 +3,7 @@
 	system(qw(r src/2018/07/21/histeq.r))
 [% END %]
 
-[%~ title = "Histogram flattening palette in R" ~%]
+[%~ global.title = "Histogram flattening palette in R" ~%]
 
 If you've ever done digital photo processing, you've probably used the "Curves":https://docs.gimp.org/en/gimp-tool-curves.html tool that provides an intuitive way to enhance contrast in some brightness ranges by scarificing it in other ranges. Basically, the steeper the curve is, the more contrast will increase. But resulting brightness range has to stay the same, so if you increase the slope anywhere, you then have to decrease it somewhere else (or cut off some brightness values, making them insidtinguishable).
 

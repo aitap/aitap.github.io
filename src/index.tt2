@@ -1,32 +1,18 @@
-[%~ title = 'Perhaps I should start a blog' ~%]
+[%~ global.title = 'Perhaps I should start a blog' ~%]
 
 [%~ PERL ~%]
-# Okay, this is really stupid
-
-my $t = Template::->new(
-	INCLUDE_PATH => [qw(src lib)],
-	STRICT => 1,
-	EVAL_PERL => 1,
-);
-
 $stash->set(
 	articles => [
 		map {
-			my %vars;
-			s{^src/}{};
-			my ($y, $m, $d) = m{^(\d{4})/(\d\d)/(\d\d)/};
-			my $st = $t->context->localise();
-			$t->context->process($_, \%vars);
-			s/\.tt2$/.html/;
-			{
-				date => "$y-$m-$d",
-				title => $t->context->stash->get('title'),
-				path => $_,
-			}
-		} glob("src/*/*/*/*.tt2")
+			$_->{src} =~ m{^src/(\d{4})/(\d\d)/(\d\d)/}
+			? {
+				date => "$1-$2-$3",
+				title => $stash->get(["process_template",[$_->{src}]])->{stash}{title},
+				path => $_->{dst},
+			} : ()
+		} @{$stash->get("all_src")}
 	]
 );
-
 [% END %]
 
 [%~ FOREACH a IN articles.sort('date').reverse ~%]

@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1"> <!-- stupid mobile browsers -->
-		<title>[% title %]</title>
+		<title>[% global.title %]</title>
 		<style>
 			.center {
 				text-align: center;
@@ -14,7 +14,7 @@
 		</style>
 	</head>
 	<body>
-		<h1>[% title %]</h1>
+		<h1>[% global.title %]</h1>
 		<div class="content">
 			[% PERL %]
 				use Text::Textile;

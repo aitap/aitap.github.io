@@ -1,4 +1,4 @@
 #!/bin/sh -ev
 git stash -k -q
-ttree -f ttreerc
+./tplmk.pl
 git stash pop -q
