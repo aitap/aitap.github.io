@@ -18,7 +18,7 @@ path('src')->visit(
 			src => $_,
 			dst => path(do {
 				local @_ = File::Spec::->splitdir($_);
-				$_[-1] =~ s/\.tt2$/.html/;
+				$_[-1] =~ s/\.tt2$//;
 				@_[1..$#_]
 			}),
 		} if /\.tt2$/i
