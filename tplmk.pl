@@ -34,6 +34,7 @@ sub process_template ($path) {
 	if (!exists $cache{$path}) {
 		warn "Processing $path\n";
 		undef $cache{$path}; # prevent infinite recursion
+		my ($ext) = $path =~ /\.(\w+)\.tt2$/;
 		my $tpl = Template::->new({
 			VARIABLES => {
 				process_template => \&process_template,
@@ -42,7 +43,7 @@ sub process_template ($path) {
 			},
 			EVAL_PERL => 1,
 			INCLUDE_PATH => [qw(lib .)],
-			WRAPPER => 'page.tt2',
+			-e "lib/$ext.tt2" ? (WRAPPER => "$ext.tt2") : (),
 			STRICT => 1,
 		});
 		my $content;
