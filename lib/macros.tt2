@@ -6,7 +6,7 @@
 		or die "mimetex: $!";
 	my $gif = do {local $/; <$mt>};
 	print '<img src="data:image/gif;base64,'.encode_base64($gif,'').'">';
-[% END %]
+[%~ END ~%]
 [%~ BLOCK code ~%][%~ PERL ~%]
 	use IPC::Open2;
 	my $pid = open2
@@ -24,4 +24,4 @@
 		'</pre>==';
 	close $sout;
 	waitpid( $pid, 0 );
-[% END %][% END %]
+[%~ END ~%][%~ END ~%]

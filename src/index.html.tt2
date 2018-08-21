@@ -1,20 +1,6 @@
 [%~ global.title = 'Perhaps I should start a blog' ~%]
 
-[%~ PERL ~%]
-$stash->set(
-	articles => [
-		map {
-			$_->{src} =~ m{^src/(\d{4})/(\d\d)/(\d\d)/}
-			? {
-				date => "$1-$2-$3",
-				title => $stash->get(["process_template",[$_->{src}]])->{stash}{title},
-				path => $_->{dst},
-			} : ()
-		} @{$stash->get("all_src")}
-	]
-);
-[% END %]
-
-[%~ FOREACH a IN articles.sort('date').reverse ~%]
-* ["[% a.date %] - [% a.title | html %]":./[% a.path | url %]]
+[%~ FOREACH a IN all_src.sort('date').reverse ~%]
+[%~ IF ! a.date ~%][%~ NEXT ~%][%~ END ~%]
+* ["[% a.date %] - [% process_template(a.src).stash.title | html %]":./[% a.dst | url %]]
 [% END %]
