@@ -1,0 +1,27 @@
+[%~ PROCESS macros.tt2 ~%]
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+	<title>[% process_template('src/index.html.tt2').stash.title | xml %]</title>
+	<link href="https://aitap.github.io/" />
+	<id>https://aitap.github.io/atom.xml</id> <!-- it's an IRI all right -->
+	<updated>[%~ PERL ~%]use POSIX 'strftime'; print strftime '%Y-%m-%dT00:00:00Z', gmtime time;[%~ END ~%]</updated>
+	<author>
+		<name>Ivan Krylov</name>
+		<email>krylov.r00t@gmail.com</email>
+	</author>
+[% FOREACH entry IN all_src %]
+		[%~ IF ! entry.date ~%][%~ NEXT ~%][%~ END ~%]
+		[%~ page = process_template(entry.src) ~%]
+		<entry>
+			<title>[% page.stash.title | xml %]</title>
+			<link href="https://aitap.github.io/[% entry.dst | url %]" />
+			<id>https://aitap.github.io/[% entry.dst | url %]</id> <!-- unique enough -->
+			<updated>[% entry.date _ "T00:00:00Z" %]</updated>
+			<content type="xhtml">
+				<div xmlns="http://www.w3.org/1999/xhtml">
+					[%~ PERL ~%]use Text::Textile 'textile'; print textile($stash->get([qw(entry content)]));[% END %]
+				</div>
+			</content>
+		</entry>
+[% END %]
+</feed>

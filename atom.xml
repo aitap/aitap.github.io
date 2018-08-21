@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+	<title>Perhaps I should start a blog</title>
+	<link href="https://aitap.github.io/" />
+	<id>https://aitap.github.io/atom.xml</id> <!-- it's an IRI all right -->
+	<updated>2018-08-21T00:00:00Z</updated>
+	<author>
+		<name>Ivan Krylov</name>
+		<email>krylov.r00t@gmail.com</email>
+	</author>
+<entry>
+			<title>Histogram flattening palette in R</title>
+			<link href="https://aitap.github.io/2018/07/21/flathist.html" />
+			<id>https://aitap.github.io/2018/07/21/flathist.html</id> <!-- unique enough -->
+			<updated>2018-07-21T00:00:00Z</updated>
+			<content type="xhtml">
+				<div xmlns="http://www.w3.org/1999/xhtml">
+				</div>
+			</content>
+		</entry>
+<entry>
+			<title>Installing Skype 8 for Linux on 32-bit Debian 9 &quot;Stretch&quot;</title>
+			<link href="https://aitap.github.io/2018/07/31/skype.html" />
+			<id>https://aitap.github.io/2018/07/31/skype.html</id> <!-- unique enough -->
+			<updated>2018-07-31T00:00:00Z</updated>
+			<content type="xhtml">
+				<div xmlns="http://www.w3.org/1999/xhtml">
+				</div>
+			</content>
+		</entry>
+
+</feed>
