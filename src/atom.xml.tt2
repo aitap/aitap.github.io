@@ -19,7 +19,10 @@
 			<updated>[% entry.date _ "T00:00:00Z" %]</updated>
 			<content type="xhtml">
 				<div xmlns="http://www.w3.org/1999/xhtml">
-					[%~ PERL ~%]use Text::Textile 'textile'; print textile($stash->get([qw(entry content)]));[% END %]
+					[%~ PERL ~%]
+						use Text::Textile 'textile';
+						print textile $stash->get([qw(page 0 stash 0 content 0)]);
+					[% END %]
 				</div>
 			</content>
 		</entry>
