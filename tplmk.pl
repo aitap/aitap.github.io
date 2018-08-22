@@ -60,5 +60,8 @@ for my $tpl (@src) {
 	# dependencies are common includes and files near source template (and the template itself)
 	my @deps = (glob("lib/*.tt2"), grep { -f } $tpl->{src}->parent->children);
 	# if any of them is newer than destination, rerun the template
-	$tpl->{dst}->spew(process_template($tpl->{src})->{content}) if any { ! -e $tpl->{dst} or -M $_ < -M $tpl->{dst} } @deps;
+	if (any { ! -e $tpl->{dst} or -M $_ < -M $tpl->{dst} } @deps) {
+		$tpl->{dst}->touchpath; # the rest of the path might not exist, either
+		$tpl->{dst}->spew(process_template($tpl->{src})->{content}) ;
+	}
 }
