@@ -3,11 +3,108 @@
 	<title>Perhaps I should start a blog</title>
 	<link href="https://aitap.github.io/" />
 	<id>https://aitap.github.io/atom.xml</id> <!-- it's an IRI all right -->
-	<updated>2018-08-21T00:00:00Z</updated>
+	<updated>2018-08-22T00:00:00Z</updated>
 	<author>
 		<name>Ivan Krylov</name>
 		<email>krylov.r00t@gmail.com</email>
 	</author>
+<entry>
+			<title>Starting an R cluster node on Windows</title>
+			<link href="https://aitap.github.io/2018/08/22/winclust.html" />
+			<id>https://aitap.github.io/2018/08/22/winclust.html</id> <!-- unique enough -->
+			<updated>2018-08-22T00:00:00Z</updated>
+			<content type="xhtml">
+				<div xmlns="http://www.w3.org/1999/xhtml"><p>Core R package <a href="http://stat.ethz.ch/R-manual/R-devel/library/parallel/doc/parallel.pdf">parallel</a> makes it possible to run trivially parallel tasks on clusters of mostly independent workers. There are many articles on the Internet about connecting to an R cluster from a Windows machine. Today we&#39;re going to use a Windows machine as a cluster node, instead.</p>
+
+<p>Function <code>makeCluster</code> requires some kind of way of running command lines on the cluster node (unless you pass <code>manual=TRUE</code> and follow the instructions). <a href="https://en.wikipedia.org/wiki/Secure_Shell"><span class="caps">SSH</span></a> is a good way to do that securely. I&#39;m going to use <a href="https://cygwin.com/">Cygwin</a> because it doesn&#39;t require administrative privileges to install or run. Make sure you install the <code>openssh</code> package.</p>
+
+<p>Here&#39;s the custom config file <code>/home/WinUserName/sshd/sshd_config</code> we are going to start <code>sshd</code> with:</p>
+
+
+
+<pre>
+# Ports below 1024 may require administrative privileges
+Port 2222
+# We want non-interactive authentication
+PasswordAuthentication no
+PubkeyAuthentication yes
+# Host key is the identity of the ssh server, like TLS certificate of a website
+HostKey /home/WinUserName/sshd/hostkey
+</pre>
+
+
+
+<p>Use <code>ssh-keygen -f /home/WinUserName/sshd/hostkey</code> to generate the identity key of our <span class="caps">SSH </span>server.</p>
+
+<p>Since we&#39;re going noninteractive, let&#39;s create our own client key we&#39;re going to authenticate with and make it known to both sides of the connection. On the client, generate a key using <code>ssh-keygen</code> and add the following to <code>~/.ssh/config</code>:</p>
+
+
+
+<pre>
+Host win-cluster-node
+	User WinUserName
+	# assuming that your key is in ~/.ssh/win-cluster-key
+	IdentityFile ~/.ssh/win-cluster-key
+	Port 2222
+	Hostname FILL_WINDOWS_CLUSTER_ADDRESS_HERE
+</pre>
+
+
+
+
+<p>Take the public part of your client key (<code>~/.ssh/win-cluster-key.pub</code> in my example) and place it to <code>/home/WinUserName/.ssh/authorized_keys</code> on the server. Start the <span class="caps">SSH </span>server by typing <code>/usr/sbin/sshd -f ~/sshd/sshd_config</code> on the server, then type <code>ssh win-cluster-node</code> on the client to verify that <span class="caps">SSH </span>connection works: you should get the same Cygwin prompt as in "Cygwin terminal".</p>
+
+<p>Here comes the fun part: launching <code>Rscript</code> from such <span class="caps">SSH </span>connection is slightly complicated. If you just add <code>R.exe</code> to the <code>$PATH</code> and try to run <code>makeCluster(&quot;win-cluster-node&quot;)</code>, it will throw an error about empty <code>TMPDIR</code>.</p>
+
+<p>Here is the shell script that fixes this problem:</p>
+
+
+
+<pre>
+<span style="color:#838183; font-style:italic">#!/bin/sh</span>
+<span style="color:#838183; font-style:italic"># substitute your user name and path to R here</span>
+<span style="color:#0057ae">export</span> TMPDIR<span style="color:#000000">=</span>C<span style="color:#000000">:/</span>Users<span style="color:#000000">/</span>WinUserName<span style="color:#000000">/</span>Temp
+<span style="color:#0057ae">exec</span> cmd <span style="color:#000000">/</span>c C<span style="color:#000000">:/</span>Users<span style="color:#000000">/</span>WinUserName<span style="color:#000000">/</span>R-3.4<span style="color:#b07e00">.3</span><span style="color:#000000">/</span>bin<span style="color:#000000">/</span>Rscript.exe <span style="color:#bf0303">&quot;$&#64;&quot;</span> TMPDIR<span style="color:#000000">=</span><span style="color:#010181">$TMPDIR</span>
+</pre>
+
+
+
+<p>Place it to <code>/home/WinUserName/Rscript.sh</code> and make it executable using <code>chmod +x</code>.</p>
+
+<p>All the puzzle pieces are in place now, let&#39;s start the cluster:</p>
+
+
+
+<pre>
+ncores <span style="color:#000000">&lt;- ...</span> <span style="color:#838183; font-style:italic"># how many worker processes to launch</span>
+master <span style="color:#000000">&lt;- ...</span> <span style="color:#838183; font-style:italic"># address of client machine to connect back to</span>
+cluster <span style="color:#000000">&lt;-</span> <span style="color:#010181">makePSOCKcluster</span><span style="color:#000000">(</span><span style="color:#010181">rep</span><span style="color:#000000">(</span><span style="color:#bf0303">&quot;win-cluster-node&quot;</span><span style="color:#000000">,</span>ncores<span style="color:#000000">),</span> master<span style="color:#000000">=</span>master<span style="color:#000000">,</span> user<span style="color:#000000">=</span><span style="color:#bf0303">&quot;WinUserName&quot;</span><span style="color:#000000">,</span> rscript<span style="color:#000000">=</span><span style="color:#bf0303">&quot;/home/WinUserName/Rscript.sh&quot;</span><span style="color:#000000">)</span>
+</pre>
+
+
+
+<p>Let&#39;s see if it works:</p>
+
+
+
+<pre>
+<span style="color:#000000">&gt;</span> <span style="color:#010181">parLapply</span><span style="color:#000000">(</span>cluster<span style="color:#000000">,</span> <span style="color:#b07e00">1</span><span style="color:#000000">:</span><span style="color:#010181">length</span><span style="color:#000000">(</span>cluster<span style="color:#000000">),</span> <span style="color:#000000; font-weight:bold">function</span><span style="color:#000000">(</span>i<span style="color:#000000">)</span> <span style="color:#010181">paste</span><span style="color:#000000">(</span><span style="color:#bf0303">&quot;node&quot;</span><span style="color:#000000">,</span>i<span style="color:#000000">,</span><span style="color:#010181">system</span><span style="color:#000000">(</span><span style="color:#bf0303">&quot;uname -a&quot;</span><span style="color:#000000">,</span> intern<span style="color:#000000">=</span><span style="color:#0057ae">T</span><span style="color:#000000">)))</span>
+<span style="color:#000000">[[</span><span style="color:#b07e00">1</span><span style="color:#000000">]]</span>
+<span style="color:#000000">[</span><span style="color:#b07e00">1</span><span style="color:#000000">]</span> <span style="color:#bf0303">&quot;node 1 CYGWIN_NT-6.1 WINSERVER 2.10.0(0.325/5/3) 2018-02-02 15:16 x86_64 Cygwin&quot;</span>
+
+<span style="color:#000000">[[</span><span style="color:#b07e00">2</span><span style="color:#000000">]]</span>
+<span style="color:#000000">[</span><span style="color:#b07e00">1</span><span style="color:#000000">]</span> <span style="color:#bf0303">&quot;node 2 CYGWIN_NT-6.1 WINSERVER 2.10.0(0.325/5/3) 2018-02-02 15:16 x86_64 Cygwin&quot;</span>
+
+<span style="color:#000000">[[</span><span style="color:#b07e00">3</span><span style="color:#000000">]]</span>
+<span style="color:#000000">[</span><span style="color:#b07e00">1</span><span style="color:#000000">]</span> <span style="color:#bf0303">&quot;node 3 CYGWIN_NT-6.1 WINSERVER 2.10.0(0.325/5/3) 2018-02-02 15:16 x86_64 Cygwin&quot;</span>
+</pre>
+
+
+
+<p>As a bonus, you are free to run most Unix-style shell commands, since the environment R is working in is Cygwin.</p>
+				</div>
+			</content>
+		</entry>
 <entry>
 			<title>Installing Skype 8 for Linux on 32-bit Debian 9 &quot;Stretch&quot;</title>
 			<link href="https://aitap.github.io/2018/07/31/skype.html" />
