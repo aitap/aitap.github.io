@@ -1,0 +1,71 @@
+[% PROCESS macros.tt2 %]
+[% global.title = "Starting an R cluster node on Windows" %]
+
+Core R package "parallel":http://stat.ethz.ch/R-manual/R-devel/library/parallel/doc/parallel.pdf makes it possible to run trivially parallel tasks on clusters of mostly independent workers. There are many articles on the Internet about connecting to an R cluster from a Windows machine. Today we're going to use a Windows machine as a cluster node, instead.
+
+Function @makeCluster@ requires some kind of way of running command lines on the cluster node (unless you pass @manual=TRUE@ and follow the instructions). "SSH":https://en.wikipedia.org/wiki/Secure_Shell is a good way to do that securely. I'm going to use "Cygwin":https://cygwin.com/ because it doesn't require administrative privileges to install or run. Make sure you install the @openssh@ package.
+
+Here's the custom config file @/home/WinUserName/sshd/sshd_config@ we are going to start @sshd@ with:
+
+[% WRAPPER code, lang='txt' %]
+# Ports below 1024 may require administrative privileges
+Port 2222
+# We want non-interactive authentication
+PasswordAuthentication no
+PubkeyAuthentication yes
+# Host key is the identity of the ssh server, like TLS certificate of a website
+HostKey /home/WinUserName/sshd/hostkey
+[% END %]
+
+Use @ssh-keygen -f /home/WinUserName/sshd/hostkey@ to generate the identity key of our SSH server.
+
+Since we're going noninteractive, let's create our own client key we're going to authenticate with and make it known to both sides of the connection. On the client, generate a key using @ssh-keygen@ and add the following to @~/.ssh/config@:
+
+[% WRAPPER code, lang='txt' %]
+Host win-cluster-node
+	User WinUserName
+	# assuming that your key is in ~/.ssh/win-cluster-key
+	IdentityFile ~/.ssh/win-cluster-key
+	Port 2222
+	Hostname FILL_WINDOWS_SERVER_ADDRESS_HERE
+[% END %]
+
+
+Take the public part of your client key (@~/.ssh/win-cluster-key.pub@ in my example) and place it to @/home/WinUserName/.ssh/authorized_keys@ on the server. Start the SSH server by typing @/usr/sbin/sshd -f ~/sshd/sshd_config@ on the server, then type @ssh win-cluster-node@ on the client to verify that SSH connection works: you should get the same Cygwin prompt as in "Cygwin terminal".
+
+Here comes the fun part: launching @Rscript@ from such SSH connection is slightly complicated. If you just add @R.exe@ to the @$PATH@ and try to run @makeCluster("win-cluster-node")@, it will throw an error about empty @TMPDIR@.
+
+Here is the shell script that fixes this problem:
+
+[% WRAPPER code, lang='bash' %]
+#!/bin/sh
+# substitute your user name and path to R here
+export TMPDIR=C:/Users/WinUserName/Temp
+exec cmd /c C:/Users/WinUserName/R-3.4.3/bin/Rscript.exe "$@" TMPDIR=$TMPDIR
+[% END %]
+
+Place it to @/home/WinUserName/Rscript.sh@ and make it executable using @chmod +x@.
+
+All the puzzle pieces are in place now, let's start the cluster:
+
+[% WRAPPER code, lang='R' %]
+ncores <- ... # how many worker processes to launch
+master <- ... # address of client machine to connect back to
+cluster <- makePSOCKcluster(rep("win-cluster-node",ncores), master=master, user="WinUserName", rscript="/home/WinUserName/Rscript.sh")
+[% END %]
+
+Let's see if it works:
+
+[% WRAPPER code, lang='R' %]
+> parLapply(cluster, 1:length(cluster), function(i) paste("node",i,system("uname -a", intern=T)))
+[[1]]
+[1] "node 1 CYGWIN_NT-6.1 WINSERVER 2.10.0(0.325/5/3) 2018-02-02 15:16 x86_64 Cygwin"
+
+[[2]]
+[1] "node 2 CYGWIN_NT-6.1 WINSERVER 2.10.0(0.325/5/3) 2018-02-02 15:16 x86_64 Cygwin"
+
+[[3]]
+[1] "node 3 CYGWIN_NT-6.1 WINSERVER 2.10.0(0.325/5/3) 2018-02-02 15:16 x86_64 Cygwin"
+[% END %]
+
+As a bonus, you are free to run most Unix-style shell commands, since the environment R is working in is Cygwin.
