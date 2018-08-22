@@ -2,13 +2,26 @@
 use 5.020;
 use warnings;
 
-use feature 'signatures';
-no warnings 'experimental::signatures'; # oh well
+use experimental 'signatures'; # oh well
 
 use List::Util qw(any);
 use Path::Tiny qw(path); # uses File::Spec
 
 use Template;
+
+package cache {
+	use base 'Storable';
+	my %paths;
+	sub new($class,$path) {
+		my $self = eval { return Storable::retrieve($path) }
+			|| bless {}, $class;
+		$paths{$self} = $path;
+		return $self;
+	}
+	sub DESTROY($self) {
+		$self->store($paths{$self});
+	}
+}
 
 # list all sources and potential destinations first: menu (and rss?) will need that
 my @src;
@@ -29,14 +42,18 @@ path('src')->visit(
 	{ recurse => 1 }
 );
 
-sub process_template ($path) {
+# FIXME: $force will be true if the FILE is older than its dependencies
+# while the cached contents might as well be newer (because of earlier dependencies)
+# It "works" for now, but needs some redesigning to avoid
+sub process_template ($path,$force=0) {
 	$path = "$path"; # force stringify even if passed an object
-	state %cache; # cache if processed once; TODO: persistence
-	# once we have persistence, cache all_src and see who addresses it using Template::Document TRACE_VARS
+	warn "Requested $path\n";
+	state $cache = cache::->new("cache.db"); # cache if already processed once
+	# TODO: cache all_src and see who addresses it using Template::Document TRACE_VARS
 	# then we can have automatically updated menu
-	if (!exists $cache{$path}) {
-		warn "Processing $path\n";
-		undef $cache{$path}; # prevent infinite recursion
+	if (!exists $cache->{$path} or $force) {
+		warn "Refreshing cache for $path\n";
+		undef $cache->{$path}; # prevent infinite recursion
 		my ($ext) = $path =~ /\.(\w+)\.tt2$/;
 		my $tpl = Template::->new({
 			VARIABLES => {
@@ -51,9 +68,13 @@ sub process_template ($path) {
 		});
 		my $content;
 		$tpl->process($path,{},\$content) or die $tpl->error;
-		$cache{$path} = { content => $content, stash => $tpl->context->stash->get('global') };
+		$cache->{$path} = {
+			content => $content,
+			stash => $tpl->context->stash->get('global'),
+			time => time
+		};
 	}
-	return $cache{$path};
+	return $cache->{$path};
 }
 
 for my $tpl (@src) {
@@ -61,7 +82,9 @@ for my $tpl (@src) {
 	my @deps = (glob("lib/*.tt2"), grep { -f } $tpl->{src}->parent->children);
 	# if any of them is newer than destination, rerun the template
 	if (any { ! -e $tpl->{dst} or -M $_ < -M $tpl->{dst} } @deps) {
+		say "$tpl->{dst} doesn't exist or older than dependencies";
 		$tpl->{dst}->touchpath; # the rest of the path might not exist, either
-		$tpl->{dst}->spew(process_template($tpl->{src})->{content}) ;
+		$tpl->{dst}->spew(process_template($tpl->{src},1)->{content}) ;
 	}
+	say "$tpl->{src} done";
 }
