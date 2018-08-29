@@ -1,0 +1,6 @@
+[% global.title = 'Convincing libcdio to read CD-AUDIO from an NRG file' %]
+
+Bibliography:
+
+https://unix.stackexchange.com/questions/367082/burning-audio-cd-from-nrg-file/367467
+https://www.gnu.org/software/libcdio/libcdio.html
