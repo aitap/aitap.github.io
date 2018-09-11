@@ -10,7 +10,7 @@ use Path::Tiny qw(path); # uses File::Spec
 use Template;
 
 package cache {
-	use base 'Storable';
+	use parent 'Storable';
 	my %paths;
 	sub new($class,$path) {
 		my $self = eval { return Storable::retrieve($path) }
