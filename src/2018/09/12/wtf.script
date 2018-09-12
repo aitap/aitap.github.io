@@ -1,0 +1,21 @@
+Script started on Ср 12 сен 2018 16:30:01
+[?1h=[1;36m[16:30:01][0m[1m[36m[[34maitap@trisector [32m~/vcs/im/src[36m][1;36m>[0m make im
+[?1l>
+Tecmake: starting [ im:Linux49_64 ]
+
+Tecmake: compiling tiff_binfile.c ...
+gcc -c  -Wall -O2 -m64 -fPIC -I. -I../include -I/usr/include/libpng -I/usr/include/libexif -Iliblzf    -DUSE_EXIF -DTEC_UNAME=Linux49_64 -DTEC_SYSNAME=Linux -DLinux=4.9 -DTEC_LITTLEENDIAN -DTEC_64 -DFUNCPROTO=15 -DNDEBUG -o ../obj/Linux49_64/tiff_binfile.o tiff_binfile.c
+[01m[Ktiff_binfile.c:[m[K In function ‘[01m[KTIFFFdOpen[m[K’:
+[01m[Ktiff_binfile.c:74:36:[m[K [01;35m[Kwarning: [m[Kcast to pointer from integer of different size [[01;35m[K-Wint-to-pointer-cast[m[K]
+   tif = TIFFClientOpen(name, mode, [01;35m[K([m[Kthandle_t) fd,  iTIFFReadProc, iTIFFWriteProc,
+                                    [01;35m[K^[m[K
+[01m[Ktiff_binfile.c:79:8:[m[K [01;31m[Kerror: [m[Kdereferencing pointer to incomplete type ‘[01m[KTIFF {aka struct tiff}[m[K’
+     tif[01;31m[K->[m[Ktif_fd = fd;
+        [01;31m[K^~[m[K
+../tecmake.mak:1700: ошибка выполнения рецепта для цели «../obj/Linux49_64/tiff_binfile.o»
+make[1]: *** [../obj/Linux49_64/tiff_binfile.o] Ошибка 1
+Makefile:12: ошибка выполнения рецепта для цели «im»
+make: *** [im] Ошибка 2
+[?1h=[1;36m[16:30:06][0m[1m[36m[[34maitap@trisector [32m~/vcs/im/src[36m][1m[31m2[0m[1;36m>[0m [?1l>exit
+
+Script done on Ср 12 сен 2018 16:30:08
