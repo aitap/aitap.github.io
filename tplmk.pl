@@ -23,22 +23,24 @@ package cache {
 	}
 }
 
+sub path2src {
+	return {
+		src => $_[0],
+		dst => path(do {
+			local @_ = File::Spec::->splitdir($_[0]);
+			$_[-1] =~ s/\.tt2$//;
+			@_[1..$#_]
+		}),
+		date => $_[0] =~ m{(\d{4})/(\d{2})/(\d{2})}
+			? "$1-$2-$3"
+			: "",
+	}
+};
+
 # list all sources and potential destinations first: menu (and rss?) will need that
 my @src;
 path('src')->visit(
-	sub {
-		push @src, {
-			src => $_,
-			dst => path(do {
-				local @_ = File::Spec::->splitdir($_);
-				$_[-1] =~ s/\.tt2$//;
-				@_[1..$#_]
-			}),
-			date => m{(\d{4})/(\d{2})/(\d{2})}
-				? "$1-$2-$3"
-				: "",
-		} if /\.tt2$/i
-	},
+	sub { push @src, path2src($_) if /\.tt2$/i },
 	{ recurse => 1 }
 );
 
@@ -77,7 +79,7 @@ sub process_template ($path,$force=0) {
 	return $cache->{$path};
 }
 
-for my $tpl (@src) {
+for my $tpl (@ARGV ? map { path2src path $_ } @ARGV : @src) {
 	# dependencies are common includes and files near source template (and the template itself)
 	my @deps = (glob("lib/*.tt2"), grep { -f } $tpl->{src}->parent->children);
 	# if any of them is newer than destination, rerun the template
