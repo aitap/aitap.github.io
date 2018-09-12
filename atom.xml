@@ -62,22 +62,9 @@ tiff_binfile.c:79:8: error: dereferencing pointer to incomplete type ‘TIFF {ak
 
 <p>I don&#39;t know what to do. Your code is so tightly coupled to the library you&#39;re shipping with that it&#39;s impossible to compile it against system <code>libtiff</code> unchanged. I might as well declare it a part of <code>IM</code> now.</p>
 
-<p>Please don&#39;t do that.</p>
+<p>This combination of arcane build system, strange defaults and library bundling and patching is the reason we can&#39;t have nice things (like <code>IUP</code> in Debian, for example). Please don&#39;t do that.</p>
 
 <p>Best regards,</p>
-				</div>
-			</content>
-		</entry>
-<entry>
-			<title>Convincing libcdio to read CD-AUDIO from an NRG file</title>
-			<link href="https://aitap.github.io/2018/08/25/nrg2wav.html" />
-			<id>https://aitap.github.io/2018/08/25/nrg2wav.html</id> <!-- unique enough -->
-			<updated>2018-08-25T00:00:00Z</updated>
-			<content type="xhtml">
-				<div xmlns="http://www.w3.org/1999/xhtml"><p>Bibliography:</p>
-
-<p>https://unix.stackexchange.com/questions/367082/burning-audio-cd-from-nrg-file/367467<br />
-https://www.gnu.org/software/libcdio/libcdio.html</p>
 				</div>
 			</content>
 		</entry>

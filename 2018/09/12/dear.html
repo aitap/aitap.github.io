@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1"> <!-- stupid mobile browsers -->
+		<title>Dear developers,</title>
+		<style>
+			.center {
+				text-align: center;
+				display: block;
+				margin-left: auto;
+				margin-right: auto;
+			}
+		</style>
+		<link href="/atom.xml" type="application/atom+xml" rel="alternate" title="Atom feed">
+	</head>
+	<body>
+		<h1>Dear developers,</h1>
+		<div class="content">
+			<p>When you write a program, or a library (especially a library!), please don&#39;t bundle third-party code you depend on together with your own.</p>
+
+<p>Okay, that may have been a little harsh. Allow me to explain.</p>
+
+<p>1. How frequently do you update the bundled library? What happens if there is a fresh new arbitrary code execution vulnerability in the copy of <code>libwhatever</code> you&#39;ve included? You are not a <code>libwhatever</code> maintainer, you don&#39;t have time for the security stuff. While the system copy of <code>libwhatever</code> will get the emergency patch and stay safe, your code (and anything upwards the dependency tree, if you wrote a library) will stay vulnerable.</p>
+
+<p>Yes, I am looking at you, <a href="http://fte.triptohell.info/">FTE</a>. Bundling Speex, JPEG, PNG, Vorbis, zlib, <a href="https://sourceforge.net/p/fteqw/code/HEAD/tree/trunk/engine/libs/">most of them last updated around 2011</a> (at the time of the writing). Not cool, even if your build system uses the system libraries on non-Windows platforms.</p>
+
+<p>2. Actually, do you even update the bundled library at all? There&#39;s no incentive to do that: a library that&#39;s bundled with your source code stays the same no matter what, frozen in amber. Outside, the world may gain support for new formats and protocols at the cost of slight API changes, but you have escaped the pain of eventually making a few fixes to your program have it magically support all those new features. Your copy of the library is always bug-to-bug compatible to the one you wrote your code against, so you start ignoring the API contract and relying on the implementation details.</p>
+
+<p>3. Actually, can you even call it the same <code>libwhatever</code> as it once was? If you bundled the library, you may as well start changing it. After all, it&#39;s not private API if you have all the sources, right?</p>
+
+<p>Yes, I&#39;m looking at you, <del>IUP</del> <a href="http://webserver2.tecgraf.puc-rio.br/im">IM</a>. I can understand the default paths correponding to where you are used to keeping your dependencies at TECGRAF. It&#39;s okay as long as I can point the variables somewhere else. I can understand the <a href="http://webserver2.tecgraf.puc-rio.br/tecmake/">custom <code>Makefile</code>-based build system</a>. You needed to support a lot of very different and not very standards-compliant platforms and compilers; you had version 3.0 in 2002, when CMake was about version 1.3 and it&#39;s not like CMake is ideal in the first place.</p>
+
+<p>But when you do this:</p>
+
+
+
+<pre>
+$ make im
+
+Tecmake: starting [ im:Linux49_64 ]
+
+Tecmake: compiling tiff_binfile.c ...
+gcc -c  -Wall -O2 -m64 -fPIC -I. -I../include -Iliblzf -DUSE_EXIF -DTEC_UNAME=Linux49_64 -DTEC_SYSNAME=Linux -DLinux=4.9 -DTEC_LITTLEENDIAN -DTEC_64 -DFUNCPROTO=15 -DNDEBUG -o ../obj/Linux49_64/tiff_binfile.o tiff_binfile.c
+tiff_binfile.c:79:8: error: dereferencing pointer to incomplete type ‘TIFF {aka struct tiff}’
+     tif-&gt;tif_fd = fd;
+        ^~
+</pre>
+
+
+
+<p>While the library explicitly says this:</p>
+
+
+
+<pre>
+<span style="color:#838183; font-style:italic">/*</span>
+<span style="color:#838183; font-style:italic"> * TIFF is defined as an incomplete type to hide the</span>
+<span style="color:#838183; font-style:italic"> * library's internal data structures from clients.</span>
+<span style="color:#838183; font-style:italic"> */</span>
+<span style="color:#000000; font-weight:bold">typedef</span> <span style="color:#0057ae">struct</span> tiff TIFF<span style="color:#000000">;</span>
+</pre>
+
+
+
+<p>I don&#39;t know what to do. Your code is so tightly coupled to the library you&#39;re shipping with that it&#39;s impossible to compile it against system <code>libtiff</code> unchanged. I might as well declare it a part of <code>IM</code> now.</p>
+
+<p>This combination of arcane build system, strange defaults and library bundling and patching is the reason we can&#39;t have nice things (like <code>IUP</code> in Debian, for example). Please don&#39;t do that.</p>
+
+<p>Best regards,</p>
+		</div>
+		<hr>
+		Unless otherwise specified, contents of this blog are covered by <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> license (or a later version).
+	</body>
+</html>
