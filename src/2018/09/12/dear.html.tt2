@@ -1,0 +1,46 @@
+[%~ PROCESS macros.tt2 ~%]
+[%~ global.title = "Dear developers," ~%]
+
+When you write a program, or a library (especially a library!), please don't bundle third-party code you depend on together with your own.
+
+Okay, that may have been a little harsh. Allow me to explain.
+
+1. How frequently do you update the bundled library? What happens if there is a fresh new arbitrary code execution vulnerability in the copy of @libwhatever@ you've included? You are not a @libwhatever@ maintainer, you don't have time for the security stuff. While the system copy of @libwhatever@ will get the emergency patch and stay safe, your code (and anything upwards the dependency tree, if you wrote a library) will stay vulnerable.
+
+Yes, I am looking at you, "FTE":http://fte.triptohell.info/. Bundling Speex, JPEG, PNG, Vorbis, zlib, "most of them last updated around 2011":https://sourceforge.net/p/fteqw/code/HEAD/tree/trunk/engine/libs/ (at the time of the writing). Not cool, even if your build system uses the system libraries on non-Windows platforms.
+
+2. Actually, do you even update the bundled library at all? There's no incentive to do that: a library that's bundled with your source code stays the same no matter what, frozen in amber. Outside, the world may gain support for new formats and protocols at the cost of slight API changes, but you have escaped the pain of eventually making a few fixes to your program have it magically support all those new features. Your copy of the library is always bug-to-bug compatible to the one you wrote your code against, so you start ignoring the API contract and relying on the implementation details.
+
+3. Actually, can you even call it the same @libwhatever@ as it once was? If you bundled the library, you may as well start changing it. After all, it's not private API if you have all the sources, right?
+
+Yes, I'm looking at you, -IUP- "IM":http://webserver2.tecgraf.puc-rio.br/im. I can understand the default paths correponding to where you are used to keeping your dependencies at TECGRAF. It's okay as long as I can point the variables somewhere else. I can understand the "custom @Makefile@-based build system":http://webserver2.tecgraf.puc-rio.br/tecmake/. You needed to support a lot of very different and not very standards-compliant platforms and compilers; you had version 3.0 in 2002, when CMake was about version 1.3 and it's not like CMake is ideal in the first place.
+
+But when you do this:
+
+[% WRAPPER code, lang='txt' %]
+$ make im
+
+Tecmake: starting [ im:Linux49_64 ]
+
+Tecmake: compiling tiff_binfile.c ...
+gcc -c  -Wall -O2 -m64 -fPIC -I. -I../include -Iliblzf -DUSE_EXIF -DTEC_UNAME=Linux49_64 -DTEC_SYSNAME=Linux -DLinux=4.9 -DTEC_LITTLEENDIAN -DTEC_64 -DFUNCPROTO=15 -DNDEBUG -o ../obj/Linux49_64/tiff_binfile.o tiff_binfile.c
+tiff_binfile.c:79:8: error: dereferencing pointer to incomplete type ‘TIFF {aka struct tiff}’
+     tif->tif_fd = fd;
+        ^~
+[% END %]
+
+While the library explicitly says this:
+
+[% WRAPPER code, lang='c' %]
+/*
+ * TIFF is defined as an incomplete type to hide the
+ * library's internal data structures from clients.
+ */
+typedef struct tiff TIFF;
+[% END %]
+
+I don't know what to do. Your code is so tightly coupled to the library you're shipping with that it's impossible to compile it against system @libtiff@ unchanged. I might as well declare it a part of @IM@ now.
+
+This combination of arcane build system, strange defaults and library bundling and patching is the reason we can't have nice things (like @IUP@ in Debian, for example). Please don't do that.
+
+Best regards,

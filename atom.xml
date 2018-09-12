@@ -3,11 +3,84 @@
 	<title>Perhaps I should start a blog</title>
 	<link href="https://aitap.github.io/" />
 	<id>https://aitap.github.io/atom.xml</id> <!-- it's an IRI all right -->
-	<updated>2018-08-22T00:00:00Z</updated>
+	<updated>2018-09-12T00:00:00Z</updated>
 	<author>
 		<name>Ivan Krylov</name>
 		<email>krylov.r00t@gmail.com</email>
 	</author>
+<entry>
+			<title>Dear developers,</title>
+			<link href="https://aitap.github.io/2018/09/12/dear.html" />
+			<id>https://aitap.github.io/2018/09/12/dear.html</id> <!-- unique enough -->
+			<updated>2018-09-12T00:00:00Z</updated>
+			<content type="xhtml">
+				<div xmlns="http://www.w3.org/1999/xhtml"><p>When you write a program, or a library (especially a library!), please don&#39;t bundle third-party code you depend on together with your own.</p>
+
+<p>Okay, that may have been a little harsh. Allow me to explain.</p>
+
+<p>1. How frequently do you update the bundled library? What happens if there is a fresh new arbitrary code execution vulnerability in the copy of <code>libwhatever</code> you&#39;ve included? You are not a <code>libwhatever</code> maintainer, you don&#39;t have time for the security stuff. While the system copy of <code>libwhatever</code> will get the emergency patch and stay safe, your code (and anything upwards the dependency tree, if you wrote a library) will stay vulnerable.</p>
+
+<p>Yes, I am looking at you, <a href="http://fte.triptohell.info/"><span class="caps">FTE</span></a>. Bundling Speex, <span class="caps">JPEG, PNG,</span> Vorbis, zlib, <a href="https://sourceforge.net/p/fteqw/code/HEAD/tree/trunk/engine/libs/">most of them last updated around 2011</a> (at the time of the writing). Not cool, even if your build system uses the system libraries on non-Windows platforms.</p>
+
+<p>2. Actually, do you even update the bundled library at all? There&#39;s no incentive to do that: a library that&#39;s bundled with your source code stays the same no matter what, frozen in amber. Outside, the world may gain support for new formats and protocols at the cost of slight <span class="caps">API </span>changes, but you have escaped the pain of eventually making a few fixes to your program have it magically support all those new features. Your copy of the library is always bug-to-bug compatible to the one you wrote your code against, so you start ignoring the <span class="caps">API </span>contract and relying on the implementation details.</p>
+
+<p>3. Actually, can you even call it the same <code>libwhatever</code> as it once was? If you bundled the library, you may as well start changing it. After all, it&#39;s not private <span class="caps">API </span>if you have all the sources, right?</p>
+
+<p>Yes, I&#39;m looking at you, <del><span class="caps">IUP</span></del> <a href="http://webserver2.tecgraf.puc-rio.br/im">IM</a>. I can understand the default paths correponding to where you are used to keeping your dependencies at <span class="caps">TECGRAF.</span> It&#39;s okay as long as I can point the variables somewhere else. I can understand the <a href="http://webserver2.tecgraf.puc-rio.br/tecmake/">custom <code>Makefile</code>-based build system</a>. You needed to support a lot of very different and not very standards-compliant platforms and compilers; you had version 3.0 in 2002, when CMake was about version 1.3 and it&#39;s not like CMake is ideal in the first place.</p>
+
+<p>But when you do this:</p>
+
+
+
+<pre>
+$ make im
+
+Tecmake: starting [ im:Linux49_64 ]
+
+Tecmake: compiling tiff_binfile.c ...
+gcc -c  -Wall -O2 -m64 -fPIC -I. -I../include -Iliblzf -DUSE_EXIF -DTEC_UNAME=Linux49_64 -DTEC_SYSNAME=Linux -DLinux=4.9 -DTEC_LITTLEENDIAN -DTEC_64 -DFUNCPROTO=15 -DNDEBUG -o ../obj/Linux49_64/tiff_binfile.o tiff_binfile.c
+tiff_binfile.c:79:8: error: dereferencing pointer to incomplete type ‘TIFF {aka struct tiff}’
+     tif-&gt;tif_fd = fd;
+        ^~
+</pre>
+
+
+
+<p>While the library explicitly says this:</p>
+
+
+
+<pre>
+<span style="color:#838183; font-style:italic">/*</span>
+<span style="color:#838183; font-style:italic"> * TIFF is defined as an incomplete type to hide the</span>
+<span style="color:#838183; font-style:italic"> * library's internal data structures from clients.</span>
+<span style="color:#838183; font-style:italic"> */</span>
+<span style="color:#000000; font-weight:bold">typedef</span> <span style="color:#0057ae">struct</span> tiff TIFF<span style="color:#000000">;</span>
+</pre>
+
+
+
+<p>I don&#39;t know what to do. Your code is so tightly coupled to the library you&#39;re shipping with that it&#39;s impossible to compile it against system <code>libtiff</code> unchanged. I might as well declare it a part of <code>IM</code> now.</p>
+
+<p>Please don&#39;t do that.</p>
+
+<p>Best regards,</p>
+				</div>
+			</content>
+		</entry>
+<entry>
+			<title>Convincing libcdio to read CD-AUDIO from an NRG file</title>
+			<link href="https://aitap.github.io/2018/08/25/nrg2wav.html" />
+			<id>https://aitap.github.io/2018/08/25/nrg2wav.html</id> <!-- unique enough -->
+			<updated>2018-08-25T00:00:00Z</updated>
+			<content type="xhtml">
+				<div xmlns="http://www.w3.org/1999/xhtml"><p>Bibliography:</p>
+
+<p>https://unix.stackexchange.com/questions/367082/burning-audio-cd-from-nrg-file/367467<br />
+https://www.gnu.org/software/libcdio/libcdio.html</p>
+				</div>
+			</content>
+		</entry>
 <entry>
 			<title>Starting an R cluster node on Windows</title>
 			<link href="https://aitap.github.io/2018/08/22/winclust.html" />
