@@ -41,7 +41,9 @@ $ make im
 Tecmake: starting [ im:Linux49_64 ]
 
 Tecmake: compiling tiff_binfile.c ...
-gcc -c  -Wall -O2 -m64 -fPIC -I. -I../include -Iliblzf -DUSE_EXIF -DTEC_UNAME=Linux49_64 -DTEC_SYSNAME=Linux -DLinux=4.9 -DTEC_LITTLEENDIAN -DTEC_64 -DFUNCPROTO=15 -DNDEBUG -o ../obj/Linux49_64/tiff_binfile.o tiff_binfile.c
+gcc -c  -Wall -O2 -m64 -fPIC -I. -I../include -Iliblzf -DUSE_EXIF -DTEC_UNAME=Linux49_64 \
+	-DTEC_SYSNAME=Linux -DLinux=4.9 -DTEC_LITTLEENDIAN -DTEC_64 -DFUNCPROTO=15 -DNDEBUG \
+	-o ../obj/Linux49_64/tiff_binfile.o tiff_binfile.c
 tiff_binfile.c:79:8: error: dereferencing pointer to incomplete type ‘TIFF {aka struct tiff}’
      tif-&gt;tif_fd = fd;
         ^~
