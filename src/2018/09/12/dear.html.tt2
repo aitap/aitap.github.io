@@ -39,7 +39,7 @@ While the library explicitly says this:
 typedef struct tiff TIFF;
 [% END %]
 
-I don't know what to do. Your code is so tightly coupled to the library you're shipping with that it's impossible to compile it against system @libtiff@ unchanged. I might as well declare it a part of @IM@ now.
+I don't know what to do. Your code is so tightly coupled to the library you're shipping with that it's impossible to compile it against system @libtiff@ unchanged. I might as well declare it a part of @IM@ now. Which doesn't mean anything good for @IM@ because, again, "they only have libtiff 4.0.6":https://sourceforge.net/p/imtoolkit/im/HEAD/tree/trunk/im/src/libtiff/ (updated more than two years ago) and there have been "tens of security fixes":http://metadata.ftp-master.debian.org/changelogs//main/t/tiff/tiff_4.0.8-2+deb9u2_changelog since then.
 
 This combination of arcane build system, strange defaults and library bundling and patching is the reason we can't have nice things (like @IUP@ in Debian, for example). Please don't do that.
 

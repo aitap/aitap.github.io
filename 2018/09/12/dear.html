@@ -63,7 +63,7 @@ tiff_binfile.c:79:8: error: dereferencing pointer to incomplete type ‘TIFF {ak
 
 
 
-<p>I don&#39;t know what to do. Your code is so tightly coupled to the library you&#39;re shipping with that it&#39;s impossible to compile it against system <code>libtiff</code> unchanged. I might as well declare it a part of <code>IM</code> now.</p>
+<p>I don&#39;t know what to do. Your code is so tightly coupled to the library you&#39;re shipping with that it&#39;s impossible to compile it against system <code>libtiff</code> unchanged. I might as well declare it a part of <code>IM</code> now. Which doesn&#39;t mean anything good for <code>IM</code> because, again, <a href="https://sourceforge.net/p/imtoolkit/im/HEAD/tree/trunk/im/src/libtiff/">they only have libtiff 4.0.6</a> (updated more than two years ago) and there have been <a href="http://metadata.ftp-master.debian.org/changelogs//main/t/tiff/tiff_4.0.8-2+deb9u2_changelog">tens of security fixes</a> since then.</p>
 
 <p>This combination of arcane build system, strange defaults and library bundling and patching is the reason we can&#39;t have nice things (like <code>IUP</code> in Debian, for example). Please don&#39;t do that.</p>
 
