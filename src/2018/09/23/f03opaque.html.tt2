@@ -1,0 +1,11 @@
+[% global.title = 'Wrapping C opaque pointers in Fortran 2003 in type-strict way' %]
+[% WRAPPER code, lang='c' %]
+struct nlopt_opt_s;
+typedef struct nlopt_opt_s *nlopt_opt;
+[% END %]
+[% WRAPPER code, lang='fortran' %]
+type, bind(c) :: nlopt_opt
+ private
+ type(c_ptr) :: ptr
+end type
+[% END %]
