@@ -1,11 +1,20 @@
-[% global.title = 'Wrapping C opaque pointers in Fortran 2003 in type-strict way' %]
+[%~ PROCESS macros.tt2 ~%]
+[%~ global.title = 'Wrapping C opaque pointers in Fortran 2003 in type-strict way' ~%]
 [% WRAPPER code, lang='c' %]
 struct nlopt_opt_s;
 typedef struct nlopt_opt_s *nlopt_opt;
 [% END %]
-[% WRAPPER code, lang='fortran' %]
+
+Is the same as
+
+[% WRAPPER code, lang='f95' %]
 type, bind(c) :: nlopt_opt
  private
  type(c_ptr) :: ptr
 end type
 [% END %]
+
+"C standard, &para;6.7.2.1":http://c0x.coding-guidelines.com/6.7.2.1.html#1423
+
+bq. A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.
+There may be unnamed padding within a structure object, but not at its beginning. 
