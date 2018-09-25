@@ -83,12 +83,12 @@ typedef struct {
 // for bit pattern purposes
 [% END %]
 
-"C standard, &sect;6.7.2.1":http://c0x.coding-guidelines.com/6.7.2.1.html#1423 says:
+"C standard, §6.7.2.1":http://c0x.coding-guidelines.com/6.7.2.1.html#1423 says:
 
 bq. A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.
 There may be unnamed padding within a structure object, but not at its beginning.
 
-So the beginning of our struct is guaranteed to be the same as beginning of the pointer we want to represent. What about the end? "C standard, &sect;6.7.2.1":http://c0x.coding-guidelines.com/6.7.2.1.html#1428 is less optimistic:
+So the beginning of our struct is guaranteed to be the same as beginning of the pointer we want to represent. What about the end? "C standard, §6.7.2.1":http://c0x.coding-guidelines.com/6.7.2.1.html#1428 is less optimistic:
 
 bq. There may be unnamed padding at the end of a structure or union
 

@@ -14,19 +14,19 @@
 			<id>https://aitap.github.io/2018/09/23/f03opaque.html</id> <!-- unique enough -->
 			<updated>2018-09-23T00:00:00Z</updated>
 			<content type="xhtml">
-				<div xmlns="http://www.w3.org/1999/xhtml"><p><a href="https://en.wikipedia.org/wiki/Opaque_pointer">Opaque pointers</a> are a programming technique used to hide implememtation details. In C, you can declare that a <code>struct</code> exists but don&#39;t tell the compiler anything else about it:</p>
+				<div xmlns="http://www.w3.org/1999/xhtml"><p><a href="https://en.wikipedia.org/wiki/Opaque_pointer">Opaque pointers</a> are a programming technique used to hide implememtation details. In C, you can declare that a <code>struct</code> exists but don't tell the compiler anything else about it:</p>
 
 
 
 <pre>
 <span style="color:#0057ae">struct</span> target<span style="color:#000000">;</span>
-<span style="color:#0057ae">void</span> <span style="color:#010181">shoot</span><span style="color:#000000">(</span><span style="color:#0057ae">struct</span> target <span style="color:#000000">*);</span>
 <span style="color:#0057ae">struct</span> target <span style="color:#000000">*</span> <span style="color:#010181">new_target</span><span style="color:#000000">(</span><span style="color:#0057ae">void</span><span style="color:#000000">);</span>
+<span style="color:#0057ae">void</span> <span style="color:#010181">shoot</span><span style="color:#000000">(</span><span style="color:#0057ae">struct</span> target <span style="color:#000000">*);</span>
 </pre>
 
 
 
-<p>At the cost of one more pointer access per function call you now have totally abstracted the inner details of the structure. You are now free to change them at will. The code that doesn&#39;t know the definition of the structure can only have pointers to objects of this incomplete type and distinguish between pointers of different types, but cannot peek inside:</p>
+<p>At the cost of one more pointer access per function call you now have totally abstracted the inner details of the structure. You are now free to change them at will. The code that doesn't know the definition of the structure can only have pointers to objects of this incomplete type and distinguish between pointers of different types, but cannot peek inside:</p>
 
 
 
@@ -34,7 +34,7 @@
 <span style="color:#0057ae">struct</span> foot<span style="color:#000000">;</span>
 <span style="color:#0057ae">struct</span> foot <span style="color:#000000">*</span> <span style="color:#010181">new_foot</span><span style="color:#000000">(</span><span style="color:#0057ae">void</span><span style="color:#000000">);</span>
 
-<span style="color:#0057ae">struct</span> target <span style="color:#000000">*</span> tgt <span style="color:#000000">=</span> foot<span style="color:#000000">;</span>
+<span style="color:#0057ae">struct</span> target <span style="color:#000000">*</span> tgt <span style="color:#000000">=</span> <span style="color:#010181">new_foot</span><span style="color:#000000">();</span>
 <span style="color:#838183; font-style:italic">// warning: initialization from incompatible pointer type [-Wincompatible-pointer-types]</span>
 <span style="color:#000000">*</span>tgt<span style="color:#000000">;</span>
 <span style="color:#838183; font-style:italic">// error: dereferencing pointer to incomplete type ‘struct target’</span>
@@ -56,7 +56,9 @@
 
 
 
-<p>If you find yourself questioning the use of such opaque pointers, have a look at <code>FILE*</code>-related functions in the standard C library. Depending on where you got it from, the actual <code>FILE</code> may store just a file descriptor and a buffer, or a <a href="http://pubs.opengroup.org/onlinepubs/9699919799/functions/open_memstream.html">dynamically allocated buffer that is pretending it&#39;s a file</a>, or <a href="https://www.gnu.org/software/libc/manual/html_node/Streams-and-Cookies.html">something completely different</a>. And even if you only limit yourself to actual filesystems, by using <code>FILE*</code> you stop caring whether the underlying file descriptor is a <a href="https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-createfilea"><span class="caps">HANDLE</span></a> or an <a href="http://pubs.opengroup.org/onlinepubs/9699919799/functions/open.html">int</a>.</p>
+<p>If you find yourself questioning the use of such opaque pointers, have a look at <code>FILE*</code>-related functions in the standard C library. Depending on where you got it from, the actual <code>FILE</code> may store just a file descriptor and a buffer, or a <a href="http://pubs.opengroup.org/onlinepubs/9699919799/functions/open_memstream.html">dynamically allocated buffer that is pretending it's a file</a>, or <a href="https://www.gnu.org/software/libc/manual/html_node/Streams-and-Cookies.html">something completely different</a>. And even if you only limit yourself to actual filesystems, by using <code>FILE*</code> you stop caring whether the underlying file descriptor is a <a href="https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-createfilea"><span class="caps">HANDLE</span></a> or an <a href="http://pubs.opengroup.org/onlinepubs/9699919799/functions/open.html">int</a> and how exactly should you do I/O on it.</p>
+
+<p>So there is no surprise that <a href="https://nlopt.readthedocs.io/en/latest/">NLopt</a> uses opaque pointers to hide the way it allocates and stores data:</p>
 
 
 
@@ -67,7 +69,73 @@
 
 
 
-<p>Is the same as</p>
+<p>What if we want to call the library from Fortran? The <a href="https://nlopt.readthedocs.io/en/latest/NLopt_Fortran_Reference/">documentation</a> states:</p>
+
+<blockquote><p>The nlopt_opt type corresponds to <code>integer*8</code>. (Technically, we could use any type that is big enough to hold a pointer on all platforms; <code>integer*8</code> is big enough for pointers on both 32-bit and 64-bit machines.)</p></blockquote>
+
+<p>NLopt supports very old programming language standards: if you omit a few algorithms from the library, you can build it with an <span class="caps">ANSI</span> C compiler and then call it from a <span class="caps">FORTRAN</span> 77 program. This is actually good (don't you hate it when a new app requires you to upgrade your libraries, your operating system, your computer, your spouse, and your cat?), but let's try to employ some techniques for writing cleaner and safer code brought to us by Fortran 90 (derived types) and Fortran 2003 (C interoperability).</p>
+
+<p>The way that's usually recommended on the internet to wrap opaque pointers is just to declare them on the Fortran side as <code>type(c_ptr)</code>, a type with all its fields private that corresponds to <code>void *</code>. Which is not wrong: according to the C standard, any pointer may be safely cast to <code>void *</code> and back and still compare equal to the original.</p>
+
+<p>A concrete example:</p>
+
+
+
+<pre>
+nlopt_opt <span style="color:#010181">nlopt_create</span><span style="color:#000000">(</span>nlopt_algorithm algorithm<span style="color:#000000">,</span> <span style="color:#0057ae">unsigned</span> n<span style="color:#000000">);</span>
+</pre>
+
+
+
+<p>transforms to:</p>
+
+
+
+<pre>
+<span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">nlopt_create</span><span style="color:#000000">(</span>algo<span style="color:#000000">,</span> n<span style="color:#000000">)</span> <span style="color:#010181">result</span><span style="color:#000000">(</span>opt<span style="color:#000000">)</span> <span style="color:#010181">bind</span><span style="color:#000000">(</span>c<span style="color:#000000">)</span>
+ <span style="color:#000000; font-weight:bold">use</span><span style="color:#000000">,</span> <span style="color:#000000; font-weight:bold">intrinsic</span> <span style="color:#000000">::</span> iso_c_binding
+ <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>c_ptr<span style="color:#000000">) ::</span> opt
+ <span style="color:#838183; font-style:italic">! assume that NLOPT_* algorithm enums were defined as enum, bind(c)</span>
+ <span style="color:#000000; font-weight:bold">integer</span><span style="color:#000000">(</span><span style="color:#010181">kind</span><span style="color:#000000">(</span>NLOPT_NUM_ALGORITHMS<span style="color:#000000">)),</span> value <span style="color:#000000">::</span> algo
+ <span style="color:#838183; font-style:italic">! also, there are no unsigned integers in Fortran, but the size matches</span>
+ <span style="color:#000000; font-weight:bold">integer</span><span style="color:#000000">(</span>kind<span style="color:#000000">=</span>c_int<span style="color:#000000">),</span> value <span style="color:#000000">::</span> n
+<span style="color:#000000; font-weight:bold">end function</span>
+</pre>
+
+
+
+<p>And this is, mostly, good enough: Fortran is usually written by <a href="https://en.wikipedia.org/wiki/Real_Programmers_Don">real programmers</a>'t_Use_Pascal who don't confuse one <code>void*</code> with another <code>type(c_ptr)</code> and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let's try to make <code>nlopt_opt</code> a distinct type in Fortran anyway.</p>
+
+<p>I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let's prove a lemma:</p>
+
+
+
+<pre>
+<span style="color:#000000; font-weight:bold">typedef</span> <span style="color:#0057ae">struct</span> nlopt_opt_s <span style="color:#000000">*</span>nlopt_opt<span style="color:#000000">;</span>
+
+<span style="color:#838183; font-style:italic">// is the same thing as</span>
+
+<span style="color:#000000; font-weight:bold">typedef</span> <span style="color:#0057ae">struct</span> <span style="color:#000000">{</span>
+	<span style="color:#0057ae">void</span> <span style="color:#000000">*</span> nlopt_opt_s<span style="color:#000000">;</span>
+<span style="color:#000000">}</span> nlopt_opt<span style="color:#000000">;</span>
+
+<span style="color:#838183; font-style:italic">// for bit pattern purposes</span>
+</pre>
+
+
+
+<p><a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1423">C standard, §6.7.2.1</a> says:</p>
+
+<blockquote><p>A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.<br />
+There may be unnamed padding within a structure object, but not at its beginning.</p></blockquote>
+
+<p>So the beginning of our struct is guaranteed to be the same as beginning of the pointer we want to represent. What about the end? <a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1428">C standard, §6.7.2.1</a> is less optimistic:</p>
+
+<blockquote><p>There may be unnamed padding at the end of a structure or union</p></blockquote>
+
+<p>However, on the architectures I have access to (Linux and Windows on 32-bit and 64-bit Intel; Linux on 32-bit <span class="caps">ARM</span>) no padding is placed after the pointer because <code>void*</code> is <a href="http://www.catb.org/esr/structure-packing/#_alignment_requirements">self-aligned</a> - alignment requirement of the pointer type is the same as the pointer size.</p>
+
+<p>So a struct containing a single pointer has, indeed, the same size and bit pattern as just a pointer. (Unless you are using a weird architecture that does things differently. In that case, sorry.) The difference is that we can express such a struct as an interoperable derived Fortran type:</p>
 
 
 
@@ -80,10 +148,29 @@
 
 
 
-<p><a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1423">C standard, &para;6.7.2.1</a></p>
+<p>Passing the structure by value is equivalent to passing the original pointer, um, by value. By marking the pointer private we ensure the original intent of opaque pointers: the implementation informaion is hidden from the library user. With that done, we can write a type-strict definition for all methods of the NLopt object:</p>
 
-<blockquote><p>A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.<br />
-There may be unnamed padding within a structure object, but not at its beginning. </p></blockquote>
+
+
+<pre>
+<span style="color:#838183; font-style:italic">!NLOPT_EXTERN(nlopt_opt) nlopt_create(nlopt_algorithm algorithm, unsigned n);</span>
+<span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">nlopt_create</span><span style="color:#000000">(</span>algo<span style="color:#000000">,</span> n<span style="color:#000000">)</span> <span style="color:#010181">bind</span><span style="color:#000000">(</span>c<span style="color:#000000">)</span> <span style="color:#010181">result</span><span style="color:#000000">(</span>ret<span style="color:#000000">)</span>
+ import nlopt_opt<span style="color:#000000">,</span> c_int
+ <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>nlopt_opt<span style="color:#000000">) ::</span> ret
+ <span style="color:#000000; font-weight:bold">integer</span><span style="color:#000000">(</span><span style="color:#010181">kind</span><span style="color:#000000">(</span>NLOPT_NUM_ALGORITHMS<span style="color:#000000">)),</span> value <span style="color:#000000">::</span> algo
+ <span style="color:#000000; font-weight:bold">integer</span><span style="color:#000000">(</span>c_int<span style="color:#000000">),</span> value <span style="color:#000000">::</span> n
+<span style="color:#000000; font-weight:bold">end function</span>
+
+<span style="color:#838183; font-style:italic">!NLOPT_EXTERN(void) nlopt_destroy(nlopt_opt opt);</span>
+<span style="color:#000000; font-weight:bold">subroutine</span> <span style="color:#010181">nlopt_destroy</span><span style="color:#000000">(</span>opt<span style="color:#000000">)</span> <span style="color:#010181">bind</span><span style="color:#000000">(</span>c<span style="color:#000000">)</span>
+ import nlopt_opt
+ <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>nlopt_opt<span style="color:#000000">),</span> value <span style="color:#000000">::</span> opt
+<span style="color:#000000; font-weight:bold">end subroutine</span>
+</pre>
+
+
+
+<p>Now package it all in a Fortran 90 module and you are done.</p>
 				</div>
 			</content>
 		</entry>
@@ -93,19 +180,19 @@ There may be unnamed padding within a structure object, but not at its beginning
 			<id>https://aitap.github.io/2018/09/12/dear.html</id> <!-- unique enough -->
 			<updated>2018-09-12T00:00:00Z</updated>
 			<content type="xhtml">
-				<div xmlns="http://www.w3.org/1999/xhtml"><p>When you write a program, or a library (especially a library!), please don&#39;t bundle third-party code you depend on together with your own.</p>
+				<div xmlns="http://www.w3.org/1999/xhtml"><p>When you write a program, or a library (especially a library!), please don't bundle third-party code you depend on together with your own.</p>
 
 <p>Okay, that may have been a little harsh. Allow me to explain.</p>
 
-<p>1. How frequently do you update the bundled library? What happens if there is a fresh new arbitrary code execution vulnerability in the copy of <code>libwhatever</code> you&#39;ve included? You are not a <code>libwhatever</code> maintainer, you don&#39;t have time for the security stuff. While the system copy of <code>libwhatever</code> will get the emergency patch and stay safe, your code (and anything upwards the dependency tree, if you wrote a library) will stay vulnerable.</p>
+<p>1. How frequently do you update the bundled library? What happens if there is a fresh new arbitrary code execution vulnerability in the copy of <code>libwhatever</code> you've included? You are not a <code>libwhatever</code> maintainer, you don't have time for the security stuff. While the system copy of <code>libwhatever</code> will get the emergency patch and stay safe, your code (and anything upwards the dependency tree, if you wrote a library) will stay vulnerable.</p>
 
 <p>Yes, I am looking at you, <a href="http://fte.triptohell.info/"><span class="caps">FTE</span></a>. Bundling Speex, <span class="caps">JPEG, PNG,</span> Vorbis, zlib, <a href="https://sourceforge.net/p/fteqw/code/HEAD/tree/trunk/engine/libs/">most of them last updated around 2011</a> (at the time of the writing). Not cool, even if your build system uses the system libraries on non-Windows platforms.</p>
 
-<p>2. Actually, do you even update the bundled library at all? There&#39;s no incentive to do that: a library that&#39;s bundled with your source code stays the same no matter what, frozen in amber. Outside, the world may gain support for new formats and protocols at the cost of slight <span class="caps">API </span>changes, but you have escaped the pain of eventually making a few fixes to your program have it magically support all those new features. Your copy of the library is always bug-to-bug compatible to the one you wrote your code against, so you start ignoring the <span class="caps">API </span>contract and relying on the implementation details.</p>
+<p>2. Actually, do you even update the bundled library at all? There's no incentive to do that: a library that's bundled with your source code stays the same no matter what, frozen in amber. Outside, the world may gain support for new formats and protocols at the cost of slight <span class="caps">API </span>changes, but you have escaped the pain of eventually making a few fixes to your program have it magically support all those new features. Your copy of the library is always bug-to-bug compatible to the one you wrote your code against, so you start ignoring the <span class="caps">API </span>contract and relying on the implementation details.</p>
 
-<p>3. Actually, can you even call it the same <code>libwhatever</code> as it once was? If you bundled the library, you may as well start changing it. After all, it&#39;s not private <span class="caps">API </span>if you have all the sources, right?</p>
+<p>3. Actually, can you even call it the same <code>libwhatever</code> as it once was? If you bundled the library, you may as well start changing it. After all, it's not private <span class="caps">API </span>if you have all the sources, right?</p>
 
-<p>Yes, I&#39;m looking at you, <del><span class="caps">IUP</span></del> <a href="http://webserver2.tecgraf.puc-rio.br/im">IM</a>. I can understand the default paths correponding to where you are used to keeping your dependencies at <span class="caps">TECGRAF.</span> It&#39;s okay as long as I can point the variables somewhere else. I can understand the <a href="http://webserver2.tecgraf.puc-rio.br/tecmake/">custom <code>Makefile</code>-based build system</a>. You needed to support a lot of very different and not very standards-compliant platforms and compilers; you had version 3.0 in 2002, when CMake was about version 1.3 and it&#39;s not like CMake is ideal in the first place.</p>
+<p>Yes, I'm looking at you, <del><span class="caps">IUP</span></del> <a href="http://webserver2.tecgraf.puc-rio.br/im">IM</a>. I can understand the default paths correponding to where you are used to keeping your dependencies at <span class="caps">TECGRAF.</span> It's okay as long as I can point the variables somewhere else. I can understand the <a href="http://webserver2.tecgraf.puc-rio.br/tecmake/">custom <code>Makefile</code>-based build system</a>. You needed to support a lot of very different and not very standards-compliant platforms and compilers; you had version 3.0 in 2002, when CMake was about version 1.3 and it's not like CMake is ideal in the first place.</p>
 
 <p>But when you do this:</p>
 
@@ -117,7 +204,9 @@ $ make im
 Tecmake: starting [ im:Linux49_64 ]
 
 Tecmake: compiling tiff_binfile.c ...
-gcc -c  -Wall -O2 -m64 -fPIC -I. -I../include -Iliblzf -DUSE_EXIF -DTEC_UNAME=Linux49_64 -DTEC_SYSNAME=Linux -DLinux=4.9 -DTEC_LITTLEENDIAN -DTEC_64 -DFUNCPROTO=15 -DNDEBUG -o ../obj/Linux49_64/tiff_binfile.o tiff_binfile.c
+gcc -c  -Wall -O2 -m64 -fPIC -I. -I../include -Iliblzf -DUSE_EXIF -DTEC_UNAME=Linux49_64 \
+	-DTEC_SYSNAME=Linux -DLinux=4.9 -DTEC_LITTLEENDIAN -DTEC_64 -DFUNCPROTO=15 -DNDEBUG \
+	-o ../obj/Linux49_64/tiff_binfile.o tiff_binfile.c
 tiff_binfile.c:79:8: error: dereferencing pointer to incomplete type ‘TIFF {aka struct tiff}’
      tif-&gt;tif_fd = fd;
         ^~
@@ -139,9 +228,9 @@ tiff_binfile.c:79:8: error: dereferencing pointer to incomplete type ‘TIFF {ak
 
 
 
-<p>I don&#39;t know what to do. Your code is so tightly coupled to the library you&#39;re shipping with that it&#39;s impossible to compile it against system <code>libtiff</code> unchanged. I might as well declare it a part of <code>IM</code> now.</p>
+<p>I don't know what to do. Your code is so tightly coupled to the library you're shipping with that it's impossible to compile it against system <code>libtiff</code> unchanged. I might as well declare it a part of <code>IM</code> now. Which doesn't mean anything good for <code>IM</code> because, again, <a href="https://sourceforge.net/p/imtoolkit/im/HEAD/tree/trunk/im/src/libtiff/">they only have libtiff 4.0.6</a> (updated more than two years ago) and there have been <a href="http://metadata.ftp-master.debian.org/changelogs//main/t/tiff/tiff_4.0.8-2+deb9u2_changelog">tens of security fixes</a> since then.</p>
 
-<p>This combination of arcane build system, strange defaults and library bundling and patching is the reason we can&#39;t have nice things (like <code>IUP</code> in Debian, for example). Please don&#39;t do that.</p>
+<p>This combination of arcane build system, strange defaults and library bundling and patching is the reason we can't have nice things (like <code>IUP</code> in Debian, for example). Please don't do that.</p>
 
 <p>Best regards,</p>
 				</div>
@@ -153,11 +242,11 @@ tiff_binfile.c:79:8: error: dereferencing pointer to incomplete type ‘TIFF {ak
 			<id>https://aitap.github.io/2018/08/22/winclust.html</id> <!-- unique enough -->
 			<updated>2018-08-22T00:00:00Z</updated>
 			<content type="xhtml">
-				<div xmlns="http://www.w3.org/1999/xhtml"><p>Core R package <a href="http://stat.ethz.ch/R-manual/R-devel/library/parallel/doc/parallel.pdf">parallel</a> makes it possible to run trivially parallel tasks on clusters of mostly independent workers. There are many articles on the Internet about connecting to an R cluster from a Windows machine. Today we&#39;re going to use a Windows machine as a cluster node, instead.</p>
+				<div xmlns="http://www.w3.org/1999/xhtml"><p>Core R package <a href="http://stat.ethz.ch/R-manual/R-devel/library/parallel/doc/parallel.pdf">parallel</a> makes it possible to run trivially parallel tasks on clusters of mostly independent workers. There are many articles on the Internet about connecting to an R cluster from a Windows machine. Today we're going to use a Windows machine as a cluster node, instead.</p>
 
-<p>Function <code>makeCluster</code> requires some kind of way of running command lines on the cluster node (unless you pass <code>manual=TRUE</code> and follow the instructions). <a href="https://en.wikipedia.org/wiki/Secure_Shell"><span class="caps">SSH</span></a> is a good way to do that securely. I&#39;m going to use <a href="https://cygwin.com/">Cygwin</a> because it doesn&#39;t require administrative privileges to install or run. Make sure you install the <code>openssh</code> package.</p>
+<p>Function <code>makeCluster</code> requires some kind of way of running command lines on the cluster node (unless you pass <code>manual=TRUE</code> and follow the instructions). <a href="https://en.wikipedia.org/wiki/Secure_Shell"><span class="caps">SSH</span></a> is a good way to do that securely. I'm going to use <a href="https://cygwin.com/">Cygwin</a> because it doesn't require administrative privileges to install or run. Make sure you install the <code>openssh</code> package.</p>
 
-<p>Here&#39;s the custom config file <code>/home/WinUserName/sshd/sshd_config</code> we are going to start <code>sshd</code> with:</p>
+<p>Here's the custom config file <code>/home/WinUserName/sshd/sshd_config</code> we are going to start <code>sshd</code> with:</p>
 
 
 
@@ -175,7 +264,7 @@ HostKey /home/WinUserName/sshd/hostkey
 
 <p>Use <code>ssh-keygen -f /home/WinUserName/sshd/hostkey</code> to generate the identity key of our <span class="caps">SSH </span>server.</p>
 
-<p>Since we&#39;re going noninteractive, let&#39;s create our own client key we&#39;re going to authenticate with and make it known to both sides of the connection. On the client, generate a key using <code>ssh-keygen</code> and add the following to <code>~/.ssh/config</code>:</p>
+<p>Since we're going noninteractive, let's create our own client key we're going to authenticate with and make it known to both sides of the connection. On the client, generate a key using <code>ssh-keygen</code> and add the following to <code>~/.ssh/config</code>:</p>
 
 
 
@@ -210,7 +299,7 @@ Host win-cluster-node
 
 <p>Place it to <code>/home/WinUserName/Rscript.sh</code> and make it executable using <code>chmod +x</code>.</p>
 
-<p>All the puzzle pieces are in place now, let&#39;s start the cluster:</p>
+<p>All the puzzle pieces are in place now, let's start the cluster:</p>
 
 
 
@@ -222,7 +311,7 @@ cluster <span style="color:#000000">&lt;-</span> <span style="color:#010181">mak
 
 
 
-<p>Let&#39;s see if it works:</p>
+<p>Let's see if it works:</p>
 
 
 
@@ -245,12 +334,12 @@ cluster <span style="color:#000000">&lt;-</span> <span style="color:#010181">mak
 			</content>
 		</entry>
 <entry>
-			<title>Installing Skype 8 for Linux on 32-bit Debian 9 &quot;Stretch&quot;</title>
+			<title>Installing Skype 8 for Linux on 32-bit Debian 9 (Stretch)</title>
 			<link href="https://aitap.github.io/2018/07/31/skype.html" />
 			<id>https://aitap.github.io/2018/07/31/skype.html</id> <!-- unique enough -->
 			<updated>2018-07-31T00:00:00Z</updated>
 			<content type="xhtml">
-				<div xmlns="http://www.w3.org/1999/xhtml"><p>First things first, there are no miracles: you still need a 64-bit processor to run <code>skypeforlinux64.deb</code>. In fact, quite a lot of code we&#39;re going to install is going to be 64-bit, so let&#39;s get started:</p>
+				<div xmlns="http://www.w3.org/1999/xhtml"><p>First things first, there are no miracles: you still need a 64-bit processor to run <code>skypeforlinux64.deb</code>. In fact, quite a lot of code we're going to install is going to be 64-bit, so let's get started:</p>
 
 
 
@@ -264,7 +353,7 @@ apt <span style="color:#000000; font-weight:bold">install</span> linux-image-amd
 
 
 
-<p>Now reboot into the new kernel (make sure of that in the bootloader menu). Make sure that everything works because we&#39;re going to use only <code>amd64</code> kernel from now on.</p>
+<p>Now reboot into the new kernel (make sure of that in the bootloader menu). Make sure that everything works because we're going to use only <code>amd64</code> kernel from now on.</p>
 
 
 
@@ -288,7 +377,7 @@ apt <span style="color:#000000">--</span>purge autoremove
 
 
 
-<p>If you run the above commands, you&#39;ll find out that <code>apt</code> suggests you to wipe half of the package management system (but has enough courtesy to warn you that it may not be the right thing to do, so can you please type that you know what you are doing first?)</p>
+<p>If you run the above commands, you'll find out that <code>apt</code> suggests you to wipe half of the package management system (but has enough courtesy to warn you that it may not be the right thing to do, so can you please type that you know what you are doing first?)</p>
 
 <p>What the hell?</p>
 
@@ -306,7 +395,7 @@ apt <span style="color:#000000">--</span>purge autoremove
 
 </ol>
 
-<p>But that&#39;s nonsense, you&#39;d say. (At least, I would.) <code>apt-trasport-https</code> provides, basically, a single executable, <code>/usr/lib/apt/methods/https</code>, which can be called by 32-bit <span class="caps">APT </span>to download whatever <span class="caps">APT </span>wants to download via <span class="caps">HTTPS.</span> There is no reason for it to be a 64-bit executable on a (mostly) 32-bit system. Can we ask <span class="caps">APT </span>to keep the 32-bit version?</p>
+<p>But that's nonsense, you'd say. (At least, I would.) <code>apt-trasport-https</code> provides, basically, a single executable, <code>/usr/lib/apt/methods/https</code>, which can be called by 32-bit <span class="caps">APT </span>to download whatever <span class="caps">APT </span>wants to download via <span class="caps">HTTPS.</span> There is no reason for it to be a 64-bit executable on a (mostly) 32-bit system. Can we ask <span class="caps">APT </span>to keep the 32-bit version?</p>
 
 <p>Almost.</p>
 
@@ -321,12 +410,12 @@ The package is not co-installable and <em>should be allowed to satisfy the depen
 <li>Take the original <code>apt-transport-https_VERSION_i386.deb</code></li>
 <li>Use <code>ar</code> to extract <code>control.tar.gz</code></li>
 <li>Extract <code>./control</code> from <code>control.tar.gz</code></li>
-<li>Patch in the missing line and increment the version while you&#39;re at it</li>
+<li>Patch in the missing line and increment the version while you're at it</li>
 <li>Try to fit the guts back before abyone notices</li>
 <li>Install the resulting package</li>
 </ol>
 
-<p>Perhaps it even could work. But we&#39;re building our own version of <code>apt-transport-https</code> from source, just for the sake of one line in the package description. Silly, I know.</p>
+<p>Perhaps it even could work. But we're building our own version of <code>apt-transport-https</code> from source, just for the sake of one line in the package description. Silly, I know.</p>
 
 
 
@@ -353,9 +442,9 @@ dpkg-buildpackage <span style="color:#000000">-</span>uc <span style="color:#000
 
 
 
-<p>Go grab a cup of coffee. (Or, preferrably, something without any caffeine, because your pulse must be racing from stress at this point.) <span class="caps">APT </span>is written in C++ and contains a lot of translation strings, so don&#39;t expect the build process to be done instantaneously.</p>
+<p>Go grab a cup of coffee. (Or, preferrably, something without any caffeine, because your pulse must be racing from stress at this point.) <span class="caps">APT </span>is written in C++ and contains a lot of translation strings, so don't expect the build process to be done instantaneously.</p>
 
-<p>Is it done yet? On my machine the build process additionally warned about some translations not being good enough and then crashed because of missing <code>usr/share/man/*/*/apt-something-something.*</code>. Notice the double <code>*/*/</code>: those must have been the translated man pages. I had to remove the offending lines from <code>debian/*.install</code>. It&#39;s not like I&#39;m even going to install those packages: I just need the patched <code>apt-transport-https</code>. After I applied the fix, I ran <code>fakeroot debian/rules binary</code> to restart the process from approximately where it stopped at.</p>
+<p>Is it done yet? On my machine the build process additionally warned about some translations not being good enough and then crashed because of missing <code>usr/share/man/*/*/apt-something-something.*</code>. Notice the double <code>*/*/</code>: those must have been the translated man pages. I had to remove the offending lines from <code>debian/*.install</code>. It's not like I'm even going to install those packages: I just need the patched <code>apt-transport-https</code>. After I applied the fix, I ran <code>fakeroot debian/rules binary</code> to restart the process from approximately where it stopped at.</p>
 
 <p>Is it done now? Finally, you can install the multi-arch-aware <code>apt-transport-https</code>:</p>
 
@@ -390,9 +479,9 @@ apt-get <span style="color:#000000; font-weight:bold">install</span> <span style
 			<id>https://aitap.github.io/2018/07/21/flathist.html</id> <!-- unique enough -->
 			<updated>2018-07-21T00:00:00Z</updated>
 			<content type="xhtml">
-				<div xmlns="http://www.w3.org/1999/xhtml"><p>If you&#39;ve ever done digital photo processing, you&#39;ve probably used the <a href="https://docs.gimp.org/en/gimp-tool-curves.html">Curves</a> tool that provides an intuitive way to enhance contrast in some brightness ranges by scarificing it in other ranges. Basically, the steeper the curve is, the more contrast will increase. But resulting brightness range has to stay the same, so if you increase the slope anywhere, you then have to decrease it somewhere else (or cut off some brightness values, making them insidtinguishable).</p>
+				<div xmlns="http://www.w3.org/1999/xhtml"><p>If you've ever done digital photo processing, you've probably used the <a href="https://docs.gimp.org/en/gimp-tool-curves.html">Curves</a> tool that provides an intuitive way to enhance contrast in some brightness ranges by scarificing it in other ranges. Basically, the steeper the curve is, the more contrast will increase. But resulting brightness range has to stay the same, so if you increase the slope anywhere, you then have to decrease it somewhere else (or cut off some brightness values, making them insidtinguishable).</p>
 
-<p>Let&#39;s take a look at this nice picture and try applying different sigmoidal transforms to it:</p>
+<p>Let's take a look at this nice picture and try applying different sigmoidal transforms to it:</p>
 
 <p><img src="moscow.png" alt="" class="center" /></p>
 
@@ -400,19 +489,19 @@ apt-get <span style="color:#000000; font-weight:bold">install</span> <span style
 
 <p><img src="mow_hist.svg" alt="" class="center" /></p>
 
-<p>Which is why it&#39;s useful to white out everything after the peak corresponding to "white" color if you are working with badly produced scans (or, worse, photos) of paper documents:</p>
+<p>Which is why it's useful to white out everything after the peak corresponding to "white" color if you are working with badly produced scans (or, worse, photos) of paper documents:</p>
 
 <p><img src="paper.png" alt="" class="center" /></p>
 
-<p>Let&#39;s assume that we are working with single-channel/false-color images (so, no <span class="caps">RGB </span>or anything, just a single matrix of intensity values) and want to highlight the variance in brightness ranges which are occupied by most pixels (i.e. where are peaks of the histogram) at the expense of less populated signal levels (i.e. where histogram/density/frequency value is lower)<sup class="footnote"><a href="#fn1">1</a></sup>. The brightness transformation function should have the steepest jumps where there are the steepest jumps on the histogram, i.e. we just need to compute cumulative sum of the histogram to generate our transfromation function.</p>
+<p>Let's assume that we are working with single-channel/false-color images (so, no <span class="caps">RGB </span>or anything, just a single matrix of intensity values) and want to highlight the variance in brightness ranges which are occupied by most pixels (i.e. where are peaks of the histogram) at the expense of less populated signal levels (i.e. where histogram/density/frequency value is lower)<sup class="footnote"><a href="#fn1">1</a></sup>. The brightness transformation function should have the steepest jumps where there are the steepest jumps on the histogram, i.e. we just need to compute cumulative sum of the histogram to generate our transfromation function.</p>
 
-<p>In fact, there&#39;s a simpler way to express that transformation, and it&#39;s <a href="https://en.wikipedia.org/wiki/ECDF">empirical cumulative distribution function</a>. Like <img src="data:image/gif;base64,R0lGODdhmAAUAPMAAP///9XV1crKyr+/v7W1tampqZKSkm5ubmFhYVRUVEZGRjg4OCgoKAAAAAAAAAAAACwAAAAAmAAUAAAE/xDISau9OOvQcAtaKFrcaGrfqa4hB14uK8dTJ4v0JTQ8T9i8RKLHOwgowWFvOMrBUjeTE2Az7U5TgODQOEp2CMpiQRkgEN7JeDIQjrqia/SdBnAQvdAOaq1ODmgWfjwVAggHFYRscBt8GVlzFTkcdRl7lU2OAw0DF4N+EpudNVUdcpagGYyRGKdUmBaXUasACAlvqQAJYTVkEkCFq7QcBz88L643PJvHv3WcjbSPDcU9yJ+4noMMPbzBeDUUHAVDR6egROl5wQbQm78VBHjrSAVSDeRw50i5grmKv3xR8VdpEAhogiI1kIcI3kAKgEY9kebpoEQkFGxl88cvXKKLDujFOfKoUCKwCTtgBaNIYmRIAKI8dawwQIE3Kv1+gXwo8kUiVjTkDFKpgwdROy55SgBUyRXAL2ee5YRJT2mNIyVI/lKX7sImL4wGsdjjUxBWsRS2rNpRdg2bqBXcPsEUVsCOW2xRTjURkerVGjtHJOtyVwufZF/S+UySzgg/IU//xrLBYSEXRyxV7ChgTS+po1h8XC6bmdUbDJAkJVWRtaVPWaZRr44dAqHZOHsF55S2h/Zk3yyMPinrOtLmacQ5a+Oae0Jq4BrIFh/OqsE85Ftnz3kOPYTylh6Id3fevLr48SKaoV/PHkAEADsAAAAAAAAAAAA=" />, its <a href="https://en.wikipedia.org/wiki/Cumulative_distribution_function">probability-theoretical counterpart</a>, eCDF calculates the fraction of points in the dataset that are less than given value:</p>
+<p>In fact, there's a simpler way to express that transformation, and it's <a href="https://en.wikipedia.org/wiki/ECDF">empirical cumulative distribution function</a>. Like <img src="data:image/gif;base64,R0lGODdhmAAUAPMAAP///9XV1crKyr+/v7W1tampqZKSkm5ubmFhYVRUVEZGRjg4OCgoKAAAAAAAAAAAACwAAAAAmAAUAAAE/xDISau9OOvQcAtaKFrcaGrfqa4hB14uK8dTJ4v0JTQ8T9i8RKLHOwgowWFvOMrBUjeTE2Az7U5TgODQOEp2CMpiQRkgEN7JeDIQjrqia/SdBnAQvdAOaq1ODmgWfjwVAggHFYRscBt8GVlzFTkcdRl7lU2OAw0DF4N+EpudNVUdcpagGYyRGKdUmBaXUasACAlvqQAJYTVkEkCFq7QcBz88L643PJvHv3WcjbSPDcU9yJ+4noMMPbzBeDUUHAVDR6egROl5wQbQm78VBHjrSAVSDeRw50i5grmKv3xR8VdpEAhogiI1kIcI3kAKgEY9kebpoEQkFGxl88cvXKKLDujFOfKoUCKwCTtgBaNIYmRIAKI8dawwQIE3Kv1+gXwo8kUiVjTkDFKpgwdROy55SgBUyRXAL2ee5YRJT2mNIyVI/lKX7sImL4wGsdjjUxBWsRS2rNpRdg2bqBXcPsEUVsCOW2xRTjURkerVGjtHJOtyVwufZF/S+UySzgg/IU//xrLBYSEXRyxV7ChgTS+po1h8XC6bmdUbDJAkJVWRtaVPWaZRr44dAqHZOHsF55S2h/Zk3yyMPinrOtLmacQ5a+Oae0Jq4BrIFh/OqsE85Ftnz3kOPYTylh6Id3fevLr48SKaoV/PHkAEADsAAAAAAAAAAAA=" />, its <a href="https://en.wikipedia.org/wiki/Cumulative_distribution_function">probability-theoretical counterpart</a>, eCDF calculates the fraction of points in the dataset that are less than given value:</p>
 
 <p class="center"><img src="data:image/gif;base64,R0lGODdhGAE/APMAAP///9XV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRjg4OCgoKBgYGAAAAAAAAAAAACwAAAAAGAE/AAAE/xDISau9OOvNu/9gKG5B0wiAYDbB6L5wLM90bd9WMwwHcgKDBm5ILBqPyKRECEAgUEuldEqtWmvC4GCiunq/4HDVYKD8xOi0ev1RbSUltnxOR5daki6zzu/7cV0TOkF/hYaHIGdLBYqIjo9UhDB7cCaQl5hFKwkImZ6ffAqUFw0+pSuoqaompiYHUKCxshWWG6INCiM8uAwNDAezwbO1Gge9Cm+6Bwq9ws6fxBkCCAwMTzADCAnJz90YcR0sU9HS1NawIwIHZd4cKqhQgYd3HvRK5BkDor8xKujtFQQYUPSOgBMzrFqhMvBPUMJVPmj4AzExCb4MxnBxGwHuwi5n6v9eWVCxYJQEBbkqDBjYkAJKC9k6zSAjgqZFk+WqXcNRokFJYSFbnsR5MUWpDBe1yFB6QZ5KHTdB6PMFDMcPUcIObCsmkxZOQRsdYrAJowfGrhYQVD1SFOOxsFi+YhqQYC0GSV41kM3rUe4HtUjlmkXykqK5nVb9QtIKlxYpv0z5CpqMDSqGwn0bz1jhpG3Tw0JjeK7T0wQesS5GA85BCa+MwV4TLEiw4sJqOVP5Jb7iNIcGNxKCoButYfRFXBNixs2AGcPxVdAVx8iIbDeVd6dJSVtH4TYA4oE3HC+54ieNtsalj4gOngvoG+0lmghN+cKyClhRr1d8PCWQg+fJlR7/H7nZtZl6M7xDnxlIkccZJfGxJh5RrX3FHiqSqVTXhH1Qp9l+GvQkwDsRGtWIcw8R5R8GjHFAoQZ0GbjEKAiG81WLxdUIgogmiiPCNAyYF2AGJQiw0hk1KhiCX6PF6OJjeokkIRFFEVeiB4P08INrUnGy4JICogDckgcUsF4xW6H5YW8z5mPZlB+UJqYJDGWIUCUoPnYhhr41gZiOFEQ2pHN5AJoHSyGwSYE67OC56AFSWmCPnclxl2ecW2qJwoYUwMbXiRN4hwUQbyrqjqU2WPmlNPN9AGpAlqmQXR6QNjQpfisGN1Cdl+UqHiwatRnom50mQOpdxN6w16sbBIVD/3MX3Eooq8w6xkFpPo6EKBfZOlSKQisY0BhnrYSTHKcZiHqoaSyidcOYAHTURq2ppvjVpIZyW20U8eY7kiqzioHjWS6oW8OkeoBgQKRWnGFqG61Ou68sxAnqgcU2ODVIkhMP8YMK4hoVcDpVHgvQdxCO1egHe1k1HCOr9jsyEnKSODN87IJESX5GYVCRBz97XEFP9XQ7R84nbyaTCgkYKzKRRkN9cxhBuyAvIA0wkrREA813JNLfIBh1GozKUDV8Rvq79dqnMpwOgGzFzPbcHiws910ILCAj1iheSPff3N4N0zIMVMfWAA8DrrjPWbuwCzO1IZF1x4tXPs0Ct+ypCnjkK+h2BNGVh14cuJqz57boqKeu+uqusu7667DHjpvasteuiQmc2K77Gjzv7vsXV/4ee09TvxC88K9vrOee4SHvvGOJG0/786gLQbkIx1O/+tgyZK896tFL/z31P0wP5fjOC8Fm6QKajz7gkxc/ArTv6w529ylmEgEAOwAAAAAAAAAAAA==" /></p>
 
 <p><img src="inthist.svg" alt="" class="center" /></p>
 
-<p>It can also be shown that the result of taking cumulative distribution function of a variate is uniformly distributed, i.e. has flat histogram, which is <a href="https://en.wikipedia.org/wiki/Histogram_equalization">how this technique is remembered everywhere</a>. So, just by plotting <img src="data:image/gif;base64,R0lGODdhUAATAPMAAP///9XV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRjg4OCgoKAAAAAAAAAAAAAAAACwAAAAAUAATAAAE/xDISau9OGscGGbBJo5kKXXhhZoC47qEB7gI8rqGMNH2a5erTHAjMDB0ktaBolBQBocDUtKcDGqlo6g1MkgtMomrIjgYKGOrVjQUgjYDxuASntUl8bk47OFu7xlrJy8pBwgjaRUIS2JOYo8iggAdBjEuKX6TWnF7iIB2OwsvjCR1HQU2Opl8BTudkZ+JDI4zJnVvcnQTBzcyhp50fHy2Fm2ukBV5ujuAAwmkiSa1FcbIkhNeU0m3d2Vfr4EMvLJ0Oh1oEx2qYUWCLSlUtABQ3/EaXDJ8SEcth+8TmTRdItMLHo9eOZjViIYmBCA/HRgQMPJmhzZpGIlRq6ihWsaPGiViXbwQEKTJCvwYIChwx2M6jidjDpJoBN5LmxRcytzJ4dMMnBEAADsAAAAAAAAAAAA=" /> instead of <img src="data:image/gif;base64,R0lGODdhEAAIAPMAAP///9XV1crKyr+/v7W1tampqW5ublRUVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwAAAAAEAAIAAAEJxBIGZAhKIfJazmIAAgINyEbMpgshbZstcFmCFRtSB7jG2cEg8YUAQA7AAAAAAAAAAAA" />, you already highlight the differences in mostly populated intensity ranges and enhance the contrast. If you do that to a photograph, the result would probably look weird (because you&#39;re now plotting quantiles instead of intensity values as perceived by the camera), but most scientific pictures already look weird even before you apply false colors, so that should not be an issue.</p>
+<p>It can also be shown that the result of taking cumulative distribution function of a variate is uniformly distributed, i.e. has flat histogram, which is <a href="https://en.wikipedia.org/wiki/Histogram_equalization">how this technique is remembered everywhere</a>. So, just by plotting <img src="data:image/gif;base64,R0lGODdhUAATAPMAAP///9XV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRjg4OCgoKAAAAAAAAAAAAAAAACwAAAAAUAATAAAE/xDISau9OGscGGbBJo5kKXXhhZoC47qEB7gI8rqGMNH2a5erTHAjMDB0ktaBolBQBocDUtKcDGqlo6g1MkgtMomrIjgYKGOrVjQUgjYDxuASntUl8bk47OFu7xlrJy8pBwgjaRUIS2JOYo8iggAdBjEuKX6TWnF7iIB2OwsvjCR1HQU2Opl8BTudkZ+JDI4zJnVvcnQTBzcyhp50fHy2Fm2ukBV5ujuAAwmkiSa1FcbIkhNeU0m3d2Vfr4EMvLJ0Oh1oEx2qYUWCLSlUtABQ3/EaXDJ8SEcth+8TmTRdItMLHo9eOZjViIYmBCA/HRgQMPJmhzZpGIlRq6ihWsaPGiViXbwQEKTJCvwYIChwx2M6jidjDpJoBN5LmxRcytzJ4dMMnBEAADsAAAAAAAAAAAA=" /> instead of <img src="data:image/gif;base64,R0lGODdhEAAIAPMAAP///9XV1crKyr+/v7W1tampqW5ublRUVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwAAAAAEAAIAAAEJxBIGZAhKIfJazmIAAgINyEbMpgshbZstcFmCFRtSB7jG2cEg8YUAQA7AAAAAAAAAAAA" />, you already highlight the differences in mostly populated intensity ranges and enhance the contrast. If you do that to a photograph, the result would probably look weird (because you're now plotting quantiles instead of intensity values as perceived by the camera), but most scientific pictures already look weird even before you apply false colors, so that should not be an issue.</p>
 
 <p><img src="mow_flat.png" alt="" class="center" /></p>
 
@@ -428,19 +517,19 @@ apt-get <span style="color:#000000; font-weight:bold">install</span> <span style
 
 <p>We will also follow the palette-function pattern, which means that the function we are going to write will both accept and return a function. Functional programming <span class="caps">FTW</span>!</p>
 
-<p>The problem with <span class="caps">CDF </span>is that it&#39;s right-continious and constant between discontiniuities. So, unlike <img src="data:image/gif;base64,R0lGODdhWAAWAPMAAP///9XV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRjg4OCgoKAAAAAAAAAAAAAAAACwAAAAAWAAWAAAE/xDISau9OGsb2M5M8I1kmXWiOaGjwLwv4QEvgsCvIUz1Dd8klooixAgMjJ3EdaAoFJTB4aCUPCcDGyk5tLg0BqplJnlVBAcDxYzlbopdCTzKGFzINLxkUOeRPV8bgXFrOx0vKQcII2wVCE1lUGWTAB0GMohlVUQMlzApGS4dO3xlehiNa38LMJByDAU3O4GnlbCyAIMgsDymjLWNDJI0ayJ9FcDGdiUMBzgzir93f38cIWMn18y1fMvIqhYDCa6p1qC9GHNrY24VYZu5eOVoYr4aXB3oqIa1ZyFcg460E+VkGAAp9awY5CHAxSKCmpA1ZPBQm4YvhywueQaqxzMdfkpslDtEAIlGXbYYlMz0oR2hlx/UDZEJs6ZEE4fOobTJk9O5DSplrNDYs+irnyBoKKFplGc+EqXKIG1KdYu3qliHwOqXtWu6chIiAAA7AAAAAAAAAAAA" />, which is always different for different <img src="data:image/gif;base64,R0lGODdhEAAQAPMAAP///9XV1crKyr+/v7W1tampqW5ublRUVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwAAAAAEAAQAAAEPRCAgAxBOMgtaTmIAAgItyEaMphsh7YspcHlKVJtSB7jG2MEQwZGLBIpviKCcDECSiEnYFBzqqTPQrWIjAAAOwAAAAAAAAAAAA==" /> taken from original dataset, we probably will get non-unique values if we evaluate eCDF on a uniform grid:</p>
+<p>The problem with <span class="caps">CDF </span>is that it's right-continious and constant between discontiniuities. So, unlike <img src="data:image/gif;base64,R0lGODdhWAAWAPMAAP///9XV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRjg4OCgoKAAAAAAAAAAAAAAAACwAAAAAWAAWAAAE/xDISau9OGsb2M5M8I1kmXWiOaGjwLwv4QEvgsCvIUz1Dd8klooixAgMjJ3EdaAoFJTB4aCUPCcDGyk5tLg0BqplJnlVBAcDxYzlbopdCTzKGFzINLxkUOeRPV8bgXFrOx0vKQcII2wVCE1lUGWTAB0GMohlVUQMlzApGS4dO3xlehiNa38LMJByDAU3O4GnlbCyAIMgsDymjLWNDJI0ayJ9FcDGdiUMBzgzir93f38cIWMn18y1fMvIqhYDCa6p1qC9GHNrY24VYZu5eOVoYr4aXB3oqIa1ZyFcg460E+VkGAAp9awY5CHAxSKCmpA1ZPBQm4YvhywueQaqxzMdfkpslDtEAIlGXbYYlMz0oR2hlx/UDZEJs6ZEE4fOobTJk9O5DSplrNDYs+irnyBoKKFplGc+EqXKIG1KdYu3qliHwOqXtWu6chIiAAA7AAAAAAAAAAAA" />, which is always different for different <img src="data:image/gif;base64,R0lGODdhEAAQAPMAAP///9XV1crKyr+/v7W1tampqW5ublRUVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwAAAAAEAAQAAAEPRCAgAxBOMgtaTmIAAgItyEaMphsh7YspcHlKVJtSB7jG2MEQwZGLBIpviKCcDECSiEnYFBzqqTPQrWIjAAAOwAAAAAAAAAAAA==" /> taken from original dataset, we probably will get non-unique values if we evaluate eCDF on a uniform grid:</p>
 
 <p><img src="ecdf_uniform.svg" alt="" class="center" /></p>
 
-<p>Same colours in a continuous palette (or, actually, any kind of palette) are a bad thing: they make different values non-distinguishable even if they got assigned to different colours in the palette. (In the end, we are still going to get non-distinguishable colors in value ranges far from histogram peaks - because we&#39;re interested in distinguishing densely-populated ranges - but we have to try, at least.) Moreover, the more points we request on that linear grid, the more repeats we&#39;ll get; and we are <strong>bound</strong> to get some non-uniques if the number of points in the grid exceeds the number of points in the dataset.</p>
+<p>Same colours in a continuous palette (or, actually, any kind of palette) are a bad thing: they make different values non-distinguishable even if they got assigned to different colours in the palette. (In the end, we are still going to get non-distinguishable colors in value ranges far from histogram peaks - because we're interested in distinguishing densely-populated ranges - but we have to try, at least.) Moreover, the more points we request on that linear grid, the more repeats we'll get; and we are <strong>bound</strong> to get some non-uniques if the number of points in the grid exceeds the number of points in the dataset.</p>
 
-<p>What to do? eCDF is just an estimate of the original <span class="caps">CDF </span>of the distrubition your points were sampled from. And your original distribution is hopefully continuous. So let&#39;s replace some of the repeats with interpolated values, so that all values are unique again:</p>
+<p>What to do? eCDF is just an estimate of the original <span class="caps">CDF </span>of the distrubition your points were sampled from. And your original distribution is hopefully continuous. So let's replace some of the repeats with interpolated values, so that all values are unique again:</p>
 
 <p><img src="ecdf_uniform2.svg" alt="" class="center" /></p>
 
-<p>We could probably try to get a smooth curve instead of linear interpolation, but splines are not guaranteed to be non-decreasing, so let&#39;s keep it simple. Now that we have a number of unique points in <img src="data:image/gif;base64,R0lGODdhIAATAPIAAP///9XV1crKyr+/v2FhYVRUVAAAAAAAACwAAAAAIAATAAADZQhqbPowwuZilTiD+3hoQTZwm3R9AiAYoWUQltmlypqRZLnEGC7vkwXHx9N1hMGkkvg7FplF4DKqlDo3NFXOaryitC1GtWv9MFoAQkFIEHPJmJEGvm327BmbJlefoO8ubnMmDQ8JADsAAAAAAAAAAAA=" /> range, let&#39;s call the original palette function and take colours at corresponding indices.</p>
+<p>We could probably try to get a smooth curve instead of linear interpolation, but splines are not guaranteed to be non-decreasing, so let's keep it simple. Now that we have a number of unique points in <img src="data:image/gif;base64,R0lGODdhIAATAPIAAP///9XV1crKyr+/v2FhYVRUVAAAAAAAACwAAAAAIAATAAADZQhqbPowwuZilTiD+3hoQTZwm3R9AiAYoWUQltmlypqRZLnEGC7vkwXHx9N1hMGkkvg7FplF4DKqlDo3NFXOaryitC1GtWv9MFoAQkFIEHPJmJEGvm327BmbJlefoO8ubnMmDQ8JADsAAAAAAAAAAAA=" /> range, let's call the original palette function and take colours at corresponding indices.</p>
 
-<p>But how many colours should we request from the original palette function? If we don&#39;t request enough, our calculated indices will be repeated and our new palette will produce same colours for different values. In a perfect world consisting of purely Platonic ideas of <img src="data:image/gif;base64,R0lGODdhEAAMAPIAAP///93d3dXV1crKyr+/v2FhYQAAAAAAACwAAAAAEAAMAAADMwhqVsxCSWlAVcPEuezMXHdh41SN2cZVTqOF4kLAYmQMtGcEgPDCpw0IaMEtjCvGxDdJAAA7AAAAAAAAAAAA" />eal numbers, there&#39;s one trick that would give us the exact number of colors we should request so that all indices recomputed from <img src="data:image/gif;base64,R0lGODdhcAATAPMAAP///93d3dXV1crKyr+/v7W1tampqW5ubmFhYVRUVAAAAAAAAAAAAAAAAAAAAAAAACwAAAAAcAATAAAE/xDISau9OOvNqfpKV4GhaJ5oOqorK34IKbh0KQngfBG21NOZkG2g0Hl+QIsNNwAQjRNYi4YjrXpEJRJVBU0VTUn28tuemEEA9jdAIMIqNMZWnk8tuEMhV8FBlWoTTyMEPBd5ex9/fhp0LR8edxQ4BglgTmVwdjEKMX9jl5MKlZdjUZpkUY89dWQzCgRpG0I+sSNhpj6vtqmzqpG9vxiMGJwkdUVqqLmhon8UxlbAgdOSZjfJdr4KAQDEPpq52M/CstTl1edzTThKqIDZpuLK7t5Izdr0Ymatt0QJmJ59S9UsFL594P4FxJMtH5pBalhJwqagwAFFww4e6dFOHbAqFjUxHtJYrosRBAAjckIX51gSF10gpdtxzePLmzhZBtuZs+fLmgjN+Rxag0NDnkSTnpC21MuECAA7AAAAAAAAAAAA" /> to <img src="data:image/gif;base64,R0lGODdhcAATAPMAAP///93d3dXV1crKyr+/v6mpqZ6enmFhYVRUVEZGRjg4OCgoKBgYGAAAAAAAAAAAACwAAAAAcAATAAAE/xDISau9OOtdm29ceH1gJ54oUKJr6rbu1Axj/FoEbHmIR3kH389WCQp2Ox1RAgNyCgmGgkApKJUXAalp0HmxGi3JhNw0CojF4Ucrb7TtWoM6pAwOh3gInrm+QQQKUxJaR24ehhSFGiBGdTIEOUmJE4t9NTIwiwdqhA2UMhIDZ156claJLaNMeqNWO6ZujyowqwCBg7ZlM5JkjCoAli0zosMDvbMYfoxxnGvEmKwWQVtNKgHBn8DFbB2x1Fu+yRWWt4IqsUwTuuNIDdgAqyvQ3OvLv7IW5QCcCwiXTAiwQ2dGRaou9boFHEhPWbQLAwMxWOOQiRVT+9zF0UKxYUJSGFC1ARQn5NaZaQnoRBOTxeOPkvWwrGCpz2Wol9QkHPhHK6cdMNs4iPmwJMZQmEEzICMCtKjTE03VFY36tOrIDANjULXKtV0HUFq7ig0xZuyYCAA7AAAAAAAAAAAA" /> would be different: <img src="data:image/gif;base64,R0lGODdhcAAnAPMAAP///93d3dXV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRgAAAAAAAAAAAAAAAAAAACwAAAAAcAAnAAAE/xDISau9OGeytP9gKI4ksCxIqa5s63VuLM8fTN+4bOd8L+6+1WkY/BV/QxjwWGOSlE5jNASdNq3XJXZyQpy2mSp4/JRoyWiMmJtsu9/wuHxOr8st67T+kt/7zYBCZxSDf4R4gSpfL4ZXhyZFhY2QFX04ko1LljeYhpqJXAcFQwMDQwJsXF4nqKBdRC2vizGflBUJCwMABAe5uzvAEhxcE6aUnRnGmyW1WgsEXNCujwILrTbWtmp3ZqjIUo/Oj9PEAAELAaDq5WV8Qohh49rBANXX8DPfGMPsVNIm/55FG2hKmpJSCxIY0IcHocJOmlDIq+HFTEUTF1EoyVil2oICvVlarfAIMpujShOnYLI3gyU+lP3yUamxMF/Nl/IYcvpgSpeMnmxOKEiScwzEf7SQxuyn00qCFDOeupuawyWNWbTEVdLY9MXNSRq6sgAK1pPSsmmkovWDdS2NCAA7AAAAAAAAAAAA" />. Except when <img src="data:image/gif;base64,R0lGODdhaAAbAPMAAP///9XV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRgAAAAAAAAAAAAAAAAAAAAAAACwAAAAAaAAbAAAE/xDISau9UuHNu/+bBipiV4Joql6n2WLvKs8hXdt4nulVzP8en00ILFpIBgJJIRAsAxNSNPmMUgIKKglqw2oV3J8GwQQMDOXB6UQWmEslbKENcHYV87IdqFEMon87VoCDAHBQfjxghoFGho+FkIKTki1YYRxLmksVl447axShkXCdizArnqhDkq2jlKU9bliKs0Qfaj2MhBmNib28IkxOCHWnM8MKxU6YmSwKBz3QwgfU1hnV2MISWAoEaMcz3d9bKEIttzLpn0E3kSYjIN3Nd+HvorpF64YESmL9Mc7l4xOvjCJDbgxpSrAJn0OCIHIBkXjEHSV2IRop0viwoop5Rivw7BtRIKDFEQCNdAOy0qO0aiMfGcRIMyYumzRzjuCos+eQkj6D1hNKtEIEADsAAAAAAAAAAAA=" /> is so small that requested amount of colors would start having troubles fitting into computer <span class="caps">RAM, </span>the difference would be impossible to perceive with human eye and impossible to express in 24-bit <span class="caps">RGB </span>in the first place. But even if we limit ourselveswith <img src="data:image/gif;base64,R0lGODdhqAAXAPMAAP///9XV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRjg4OCgoKBgYGAAAAAAAAAAAACwAAAAAqAAXAAAE/xDISau9OOtdQ/tNwI1kaZ5oqqLNIA3NKs90bVseKGLx1N/AoHDYev00guNwyWx6NsdeCAMTNK9YoGeXKQJgkq3lc8hKvGPXBb38ID4UMlwmnuSmEsGh8ebWKw1WMmAUd1x7IHMAiIkTjCB2OhSEkR9cFAUJDApqEgVKKoEUSS5VLwkKCAQVSRetK2SFoq+vnj21AJ95R7oApF+iALGRVrg+BQgLZT6CdHgSBwgTBgYSBgcDSZd1P8YpP38+fnjP3OM70dPVPpGXODEDCpxhzyvGisJnaveCRdo0P9hcCNdu4DN8UXx0wiDmgDJ67r41u5AuH7tRPQzVCPjJ0pqJce5AMstQ8cwxSRZexZvn7Uyil/gsZkCwzAuli1BgvlzjaFY9AAQhGow4gWacnsV+CmvmsEywGaAwCrqjNOpGhROMtfRldSvXiQE7GfuzculVhkq7tMFpMiQPkWfgAv0ZEFCHeg4XSDv7jqhaIiPZyhzzty/huEcxVojHYNkanY0S391h9XBOyDHbcs2qpLLnoZpl1sIFo4CFAwkWyni6y3ToDF6hxnHxT7Ll263ZRqF9sAEiVpVR3HsUPDAQORlR2rbLYwxxl7/nejQjy2+JoNSzayfBOkXs7eDDC1WBXbz58OU3pD/PPvsTFtbbh48AADsAAAAAAAAAAAA=" />, which is the total number of colours you can express in R using <code>#RRGGBB</code> notation (not counting transparency channel which is not used and would take 256 times more) it&#39;s still too much because none of the continuous palette functions manage to fit the entire (three-dimensional) <span class="caps">RGB </span>space into one linear range of values. In fact, palette functions stop producing unique colours after a few thousands, and most don&#39;t even reach that much:</p>
+<p>But how many colours should we request from the original palette function? If we don't request enough, our calculated indices will be repeated and our new palette will produce same colours for different values. In a perfect world consisting of purely Platonic ideas of <img src="data:image/gif;base64,R0lGODdhEAAMAPIAAP///93d3dXV1crKyr+/v2FhYQAAAAAAACwAAAAAEAAMAAADMwhqVsxCSWlAVcPEuezMXHdh41SN2cZVTqOF4kLAYmQMtGcEgPDCpw0IaMEtjCvGxDdJAAA7AAAAAAAAAAAA" />eal numbers, there's one trick that would give us the exact number of colors we should request so that all indices recomputed from <img src="data:image/gif;base64,R0lGODdhcAATAPMAAP///93d3dXV1crKyr+/v7W1tampqW5ubmFhYVRUVAAAAAAAAAAAAAAAAAAAAAAAACwAAAAAcAATAAAE/xDISau9OOvNqfpKV4GhaJ5oOqorK34IKbh0KQngfBG21NOZkG2g0Hl+QIsNNwAQjRNYi4YjrXpEJRJVBU0VTUn28tuemEEA9jdAIMIqNMZWnk8tuEMhV8FBlWoTTyMEPBd5ex9/fhp0LR8edxQ4BglgTmVwdjEKMX9jl5MKlZdjUZpkUY89dWQzCgRpG0I+sSNhpj6vtqmzqpG9vxiMGJwkdUVqqLmhon8UxlbAgdOSZjfJdr4KAQDEPpq52M/CstTl1edzTThKqIDZpuLK7t5Izdr0Ymatt0QJmJ59S9UsFL594P4FxJMtH5pBalhJwqagwAFFww4e6dFOHbAqFjUxHtJYrosRBAAjckIX51gSF10gpdtxzePLmzhZBtuZs+fLmgjN+Rxag0NDnkSTnpC21MuECAA7AAAAAAAAAAAA" /> to <img src="data:image/gif;base64,R0lGODdhcAATAPMAAP///93d3dXV1crKyr+/v6mpqZ6enmFhYVRUVEZGRjg4OCgoKBgYGAAAAAAAAAAAACwAAAAAcAATAAAE/xDISau9OOtdm29ceH1gJ54oUKJr6rbu1Axj/FoEbHmIR3kH389WCQp2Ox1RAgNyCgmGgkApKJUXAalp0HmxGi3JhNw0CojF4Ucrb7TtWoM6pAwOh3gInrm+QQQKUxJaR24ehhSFGiBGdTIEOUmJE4t9NTIwiwdqhA2UMhIDZ156claJLaNMeqNWO6ZujyowqwCBg7ZlM5JkjCoAli0zosMDvbMYfoxxnGvEmKwWQVtNKgHBn8DFbB2x1Fu+yRWWt4IqsUwTuuNIDdgAqyvQ3OvLv7IW5QCcCwiXTAiwQ2dGRaou9boFHEhPWbQLAwMxWOOQiRVT+9zF0UKxYUJSGFC1ARQn5NaZaQnoRBOTxeOPkvWwrGCpz2Wol9QkHPhHK6cdMNs4iPmwJMZQmEEzICMCtKjTE03VFY36tOrIDANjULXKtV0HUFq7ig0xZuyYCAA7AAAAAAAAAAAA" /> would be different: <img src="data:image/gif;base64,R0lGODdhcAAnAPMAAP///93d3dXV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRgAAAAAAAAAAAAAAAAAAACwAAAAAcAAnAAAE/xDISau9OGeytP9gKI4ksCxIqa5s63VuLM8fTN+4bOd8L+6+1WkY/BV/QxjwWGOSlE5jNASdNq3XJXZyQpy2mSp4/JRoyWiMmJtsu9/wuHxOr8st67T+kt/7zYBCZxSDf4R4gSpfL4ZXhyZFhY2QFX04ko1LljeYhpqJXAcFQwMDQwJsXF4nqKBdRC2vizGflBUJCwMABAe5uzvAEhxcE6aUnRnGmyW1WgsEXNCujwILrTbWtmp3ZqjIUo/Oj9PEAAELAaDq5WV8Qohh49rBANXX8DPfGMPsVNIm/55FG2hKmpJSCxIY0IcHocJOmlDIq+HFTEUTF1EoyVil2oICvVlarfAIMpujShOnYLI3gyU+lP3yUamxMF/Nl/IYcvpgSpeMnmxOKEiScwzEf7SQxuyn00qCFDOeupuawyWNWbTEVdLY9MXNSRq6sgAK1pPSsmmkovWDdS2NCAA7AAAAAAAAAAAA" />. Except when <img src="data:image/gif;base64,R0lGODdhaAAbAPMAAP///9XV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRgAAAAAAAAAAAAAAAAAAAAAAACwAAAAAaAAbAAAE/xDISau9UuHNu/+bBipiV4Joql6n2WLvKs8hXdt4nulVzP8en00ILFpIBgJJIRAsAxNSNPmMUgIKKglqw2oV3J8GwQQMDOXB6UQWmEslbKENcHYV87IdqFEMon87VoCDAHBQfjxghoFGho+FkIKTki1YYRxLmksVl447axShkXCdizArnqhDkq2jlKU9bliKs0Qfaj2MhBmNib28IkxOCHWnM8MKxU6YmSwKBz3QwgfU1hnV2MISWAoEaMcz3d9bKEIttzLpn0E3kSYjIN3Nd+HvorpF64YESmL9Mc7l4xOvjCJDbgxpSrAJn0OCIHIBkXjEHSV2IRop0viwoop5Rivw7BtRIKDFEQCNdAOy0qO0aiMfGcRIMyYumzRzjuCos+eQkj6D1hNKtEIEADsAAAAAAAAAAAA=" /> is so small that requested amount of colors would start having troubles fitting into computer <span class="caps">RAM, </span>the difference would be impossible to perceive with human eye and impossible to express in 24-bit <span class="caps">RGB </span>in the first place. But even if we limit ourselveswith <img src="data:image/gif;base64,R0lGODdhqAAXAPMAAP///9XV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRjg4OCgoKBgYGAAAAAAAAAAAACwAAAAAqAAXAAAE/xDISau9OOtdQ/tNwI1kaZ5oqqLNIA3NKs90bVseKGLx1N/AoHDYev00guNwyWx6NsdeCAMTNK9YoGeXKQJgkq3lc8hKvGPXBb38ID4UMlwmnuSmEsGh8ebWKw1WMmAUd1x7IHMAiIkTjCB2OhSEkR9cFAUJDApqEgVKKoEUSS5VLwkKCAQVSRetK2SFoq+vnj21AJ95R7oApF+iALGRVrg+BQgLZT6CdHgSBwgTBgYSBgcDSZd1P8YpP38+fnjP3OM70dPVPpGXODEDCpxhzyvGisJnaveCRdo0P9hcCNdu4DN8UXx0wiDmgDJ67r41u5AuH7tRPQzVCPjJ0pqJce5AMstQ8cwxSRZexZvn7Uyil/gsZkCwzAuli1BgvlzjaFY9AAQhGow4gWacnsV+CmvmsEywGaAwCrqjNOpGhROMtfRldSvXiQE7GfuzculVhkq7tMFpMiQPkWfgAv0ZEFCHeg4XSDv7jqhaIiPZyhzzty/huEcxVojHYNkanY0S391h9XBOyDHbcs2qpLLnoZpl1sIFo4CFAwkWyni6y3ToDF6hxnHxT7Ll263ZRqF9sAEiVpVR3HsUPDAQORlR2rbLYwxxl7/nejQjy2+JoNSzayfBOkXs7eDDC1WBXbz58OU3pD/PPvsTFtbbh48AADsAAAAAAAAAAAA=" />, which is the total number of colours you can express in R using <code>#RRGGBB</code> notation (not counting transparency channel which is not used and would take 256 times more) it's still too much because none of the continuous palette functions manage to fit the entire (three-dimensional) <span class="caps">RGB </span>space into one linear range of values. In fact, palette functions stop producing unique colours after a few thousands, and most don't even reach that much:</p>
 
 
 
@@ -458,7 +547,7 @@ apt-get <span style="color:#000000; font-weight:bold">install</span> <span style
 
 
 
-<p>So let&#39;s limit our number of colours to a nice and modest value of 2048 but leave that as a parameter. Now that we know our N, calculating the indices is fairly simple: <img src="data:image/gif;base64,R0lGODdhqAATAPMAAP///93d3dXV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRjg4OCgoKBgYGAAAAAAAACwAAAAAqAATAAAE/xDISau9OOvNheNg6IXk5QjSqX1l63IOO3no69J2ieN572MyAE9CCP4oQ0AsEaPEEM1QcaZKHq+voGPgdCA2RtLWYlA0FgSKIbzyUgYsOHaepdac4JdVaUgwvhNjLUE7KnSHIDJyFmx4LotIHwQLaBJ7MBWCgimGOQ4HBZ9cljGdUUoyn6Exd0Kla4GjmXkYHqClNZt2AAh/pK0hRouQcLCZpcjIFkwFByweXHB3m0FMXFOk0W4pQLQWHn1ji2yLk5WQJWGpsdg9DmlOsotDWvBKsY73Jt6ZKO+MJmT1+qJLDEBu8X6omwUggIMAgfLpm4iQokRUyBQkq7AnzBBzSsFkcUpW6uLEIOg8HYzY8CHLiicZWnzZLUPHb514MWCQwMZCmO9SkiS5Ep+EeaYkphK5bt8KMFxGwDxqZFIDQC5+UnSwRmQdjuJMpYGTwN6/FPCgASALr+DUorHIrjUlsogBCwgU2BtUYRihUz6hGPHAKlKMZiy8JIZC5bAzqscEZ2BDGHFOSE8Az82ieGkKr4hC28wZTA9p0b9cAUPNOiHfLKBR+21NG+fq0JcQFbpdm3XuQ7+x7O5NnEpvqagNkY4AADsAAAAAAAAAAAA=" />, and there we have our histogram-flattening palette transformation function:</p>
+<p>So let's limit our number of colours to a nice and modest value of 2048 but leave that as a parameter. Now that we know our N, calculating the indices is fairly simple: <img src="data:image/gif;base64,R0lGODdhqAATAPMAAP///93d3dXV1crKyr+/v7W1tampqW5ubmFhYVRUVEZGRjg4OCgoKBgYGAAAAAAAACwAAAAAqAATAAAE/xDISau9OOvNheNg6IXk5QjSqX1l63IOO3no69J2ieN572MyAE9CCP4oQ0AsEaPEEM1QcaZKHq+voGPgdCA2RtLWYlA0FgSKIbzyUgYsOHaepdac4JdVaUgwvhNjLUE7KnSHIDJyFmx4LotIHwQLaBJ7MBWCgimGOQ4HBZ9cljGdUUoyn6Exd0Kla4GjmXkYHqClNZt2AAh/pK0hRouQcLCZpcjIFkwFByweXHB3m0FMXFOk0W4pQLQWHn1ji2yLk5WQJWGpsdg9DmlOsotDWvBKsY73Jt6ZKO+MJmT1+qJLDEBu8X6omwUggIMAgfLpm4iQokRUyBQkq7AnzBBzSsFkcUpW6uLEIOg8HYzY8CHLiicZWnzZLUPHb514MWCQwMZCmO9SkiS5Ep+EeaYkphK5bt8KMFxGwDxqZFIDQC5+UnSwRmQdjuJMpYGTwN6/FPCgASALr+DUorHIrjUlsogBCwgU2BtUYRihUz6hGPHAKlKMZiy8JIZC5bAzqscEZ2BDGHFOSE8Az82ieGkKr4hC28wZTA9p0b9cAUPNOiHfLKBR+21NG+fq0JcQFbpdm3XuQ7+x7O5NnEpvqagNkY4AADsAAAAAAAAAAAA=" />, and there we have our histogram-flattening palette transformation function:</p>
 
 
 
@@ -488,7 +577,7 @@ histeq<span style="color:#000000">.</span>palette <span style="color:#000000">&l
 
 
 
-<p>Let&#39;s feed a scientific image and a false-color palette to this palette-transforming function:</p>
+<p>Let's feed a scientific image and a false-color palette to this palette-transforming function:</p>
 
 
 
@@ -502,9 +591,9 @@ image<span style="color:#000000">.</span><span style="color:#010181">plot</span>
 
 <p><img src="wavy_spectrum.png" alt="" class="center" /></p>
 
-<p>Most of the image was background, so our signal is whitened out. Instead, we see that some kind of wavy pattern covers all the image, invisible unless you highlight just the right part of the dynamic range. This is actually bad because it could interfere with shape of weak signals, but at least now we know that. (It&#39;s definitely impossible to see just from looking at original 16-bit image.)</p>
+<p>Most of the image was background, so our signal is whitened out. Instead, we see that some kind of wavy pattern covers all the image, invisible unless you highlight just the right part of the dynamic range. This is actually bad because it could interfere with shape of weak signals, but at least now we know that. (It's definitely impossible to see just from looking at original 16-bit image.)</p>
 
-<p>Try histogram flattening on your own data to see if there&#39;s any patterns lurking in the middle of the bell curve!</p>
+<p>Try histogram flattening on your own data to see if there's any patterns lurking in the middle of the bell curve!</p>
 
 <p class="footnote" id="fn1"><sup>1</sup> This is the opposite of what you usually see on false-color images: the most different values are ones at the far end of the bell curve of the distribution.</p>
 

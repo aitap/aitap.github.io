@@ -20,7 +20,12 @@
 		<div class="content">
 			[% PERL %]
 				use Text::Textile;
-				print Text::Textile::->new(flavor => "html")->textile($stash->get("content"));
+				use Encode 'decode';
+				print
+					decode utf8 =>
+						Text::Textile::->new(
+							flavor => "html", encoding => "utf-8", char_encoding => 0
+						)->textile($stash->get("content"));
 			[% END %]
 		</div>
 		<hr>

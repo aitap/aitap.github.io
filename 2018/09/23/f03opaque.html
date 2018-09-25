@@ -17,7 +17,7 @@
 	<body>
 		<h1>Wrapping C opaque pointers in Fortran 2003 in type-strict way</h1>
 		<div class="content">
-			<p><a href="https://en.wikipedia.org/wiki/Opaque_pointer">Opaque pointers</a> are a programming technique used to hide implememtation details. In C, you can declare that a <code>struct</code> exists but don&#39;t tell the compiler anything else about it:</p>
+			<p><a href="https://en.wikipedia.org/wiki/Opaque_pointer">Opaque pointers</a> are a programming technique used to hide implememtation details. In C, you can declare that a <code>struct</code> exists but don't tell the compiler anything else about it:</p>
 
 
 
@@ -29,7 +29,7 @@
 
 
 
-<p>At the cost of one more pointer access per function call you now have totally abstracted the inner details of the structure. You are now free to change them at will. The code that doesn&#39;t know the definition of the structure can only have pointers to objects of this incomplete type and distinguish between pointers of different types, but cannot peek inside:</p>
+<p>At the cost of one more pointer access per function call you now have totally abstracted the inner details of the structure. You are now free to change them at will. The code that doesn't know the definition of the structure can only have pointers to objects of this incomplete type and distinguish between pointers of different types, but cannot peek inside:</p>
 
 
 
@@ -59,7 +59,7 @@
 
 
 
-<p>If you find yourself questioning the use of such opaque pointers, have a look at <code>FILE*</code>-related functions in the standard C library. Depending on where you got it from, the actual <code>FILE</code> may store just a file descriptor and a buffer, or a <a href="http://pubs.opengroup.org/onlinepubs/9699919799/functions/open_memstream.html">dynamically allocated buffer that is pretending it&#39;s a file</a>, or <a href="https://www.gnu.org/software/libc/manual/html_node/Streams-and-Cookies.html">something completely different</a>. And even if you only limit yourself to actual filesystems, by using <code>FILE*</code> you stop caring whether the underlying file descriptor is a <a href="https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-createfilea">HANDLE</a> or an <a href="http://pubs.opengroup.org/onlinepubs/9699919799/functions/open.html">int</a> and how exactly should you do I/O on it.</p>
+<p>If you find yourself questioning the use of such opaque pointers, have a look at <code>FILE*</code>-related functions in the standard C library. Depending on where you got it from, the actual <code>FILE</code> may store just a file descriptor and a buffer, or a <a href="http://pubs.opengroup.org/onlinepubs/9699919799/functions/open_memstream.html">dynamically allocated buffer that is pretending it's a file</a>, or <a href="https://www.gnu.org/software/libc/manual/html_node/Streams-and-Cookies.html">something completely different</a>. And even if you only limit yourself to actual filesystems, by using <code>FILE*</code> you stop caring whether the underlying file descriptor is a <a href="https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-createfilea">HANDLE</a> or an <a href="http://pubs.opengroup.org/onlinepubs/9699919799/functions/open.html">int</a> and how exactly should you do I/O on it.</p>
 
 <p>So there is no surprise that <a href="https://nlopt.readthedocs.io/en/latest/">NLopt</a> uses opaque pointers to hide the way it allocates and stores data:</p>
 
@@ -76,9 +76,9 @@
 
 <blockquote><p>The nlopt_opt type corresponds to <code>integer*8</code>. (Technically, we could use any type that is big enough to hold a pointer on all platforms; <code>integer*8</code> is big enough for pointers on both 32-bit and 64-bit machines.)</p></blockquote>
 
-<p>NLopt supports very old programming language standards: if you omit a few algorithms from the library, you can build it with an ANSI C compiler and then call it from a FORTRAN 77 program. This is actually good (don&#39;t you hate it when a new app requires you to upgrade your libraries, your operating system, your computer, your spouse, and your cat?), but let&#39;s try to employ some techniques for writing cleaner and safer code brought to us by Fortran 90 (derived types) and Fortran 2003 (C interoperability).</p>
+<p>NLopt supports very old programming language standards: if you omit a few algorithms from the library, you can build it with an ANSI C compiler and then call it from a FORTRAN 77 program. This is actually good (don't you hate it when a new app requires you to upgrade your libraries, your operating system, your computer, your spouse, and your cat?), but let's try to employ some techniques for writing cleaner and safer code brought to us by Fortran 90 (derived types) and Fortran 2003 (C interoperability).</p>
 
-<p>The way that&#39;s usually recommended on the internet to wrap opaque pointers is just to declare them on the Fortran side as <code>type(c_ptr)</code>, a type with all its fields private that corresponds to <code>void *</code>. Which is not wrong: according to the C standard, any pointer may be safely cast to <code>void *</code> and back and still compare equal to the original.</p>
+<p>The way that's usually recommended on the internet to wrap opaque pointers is just to declare them on the Fortran side as <code>type(c_ptr)</code>, a type with all its fields private that corresponds to <code>void *</code>. Which is not wrong: according to the C standard, any pointer may be safely cast to <code>void *</code> and back and still compare equal to the original.</p>
 
 <p>A concrete example:</p>
 
@@ -107,9 +107,9 @@ nlopt_opt <span style="color:#010181">nlopt_create</span><span style="color:#000
 
 
 
-<p>And this is, mostly, good enough: Fortran is usually written by <a href="https://en.wikipedia.org/wiki/Real_Programmers_Don&amp;#39;t_Use_Pascal">real programmers</a> who don&#39;t confuse one <code>void*</code> with another <code>type(c_ptr)</code> and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let&#39;s try to make <code>nlopt_opt</code> a distinct type in Fortran anyway.</p>
+<p>And this is, mostly, good enough: Fortran is usually written by <a href="https://en.wikipedia.org/wiki/Real_Programmers_Don">real programmers</a>'t_Use_Pascal who don't confuse one <code>void*</code> with another <code>type(c_ptr)</code> and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let's try to make <code>nlopt_opt</code> a distinct type in Fortran anyway.</p>
 
-<p>I couldn&#39;t express "this is a pointer to a user-defined type that&#39;s never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let&#39;s prove a lemma:</p>
+<p>I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let's prove a lemma:</p>
 
 
 
@@ -127,12 +127,12 @@ nlopt_opt <span style="color:#010181">nlopt_create</span><span style="color:#000
 
 
 
-<p><a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1423">C standard, &sect;6.7.2.1</a> says:</p>
+<p><a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1423">C standard, §6.7.2.1</a> says:</p>
 
 <blockquote><p>A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.<br>
 There may be unnamed padding within a structure object, but not at its beginning.</p></blockquote>
 
-<p>So the beginning of our struct is guaranteed to be the same as beginning of the pointer we want to represent. What about the end? <a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1428">C standard, &sect;6.7.2.1</a> is less optimistic:</p>
+<p>So the beginning of our struct is guaranteed to be the same as beginning of the pointer we want to represent. What about the end? <a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1428">C standard, §6.7.2.1</a> is less optimistic:</p>
 
 <blockquote><p>There may be unnamed padding at the end of a structure or union</p></blockquote>
 
