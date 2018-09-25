@@ -3,11 +3,90 @@
 	<title>Perhaps I should start a blog</title>
 	<link href="https://aitap.github.io/" />
 	<id>https://aitap.github.io/atom.xml</id> <!-- it's an IRI all right -->
-	<updated>2018-09-12T00:00:00Z</updated>
+	<updated>2018-09-25T00:00:00Z</updated>
 	<author>
 		<name>Ivan Krylov</name>
 		<email>krylov.r00t@gmail.com</email>
 	</author>
+<entry>
+			<title>Wrapping C opaque pointers in Fortran 2003 in type-strict way</title>
+			<link href="https://aitap.github.io/2018/09/23/f03opaque.html" />
+			<id>https://aitap.github.io/2018/09/23/f03opaque.html</id> <!-- unique enough -->
+			<updated>2018-09-23T00:00:00Z</updated>
+			<content type="xhtml">
+				<div xmlns="http://www.w3.org/1999/xhtml"><p><a href="https://en.wikipedia.org/wiki/Opaque_pointer">Opaque pointers</a> are a programming technique used to hide implememtation details. In C, you can declare that a <code>struct</code> exists but don&#39;t tell the compiler anything else about it:</p>
+
+
+
+<pre>
+<span style="color:#0057ae">struct</span> target<span style="color:#000000">;</span>
+<span style="color:#0057ae">void</span> <span style="color:#010181">shoot</span><span style="color:#000000">(</span><span style="color:#0057ae">struct</span> target <span style="color:#000000">*);</span>
+<span style="color:#0057ae">struct</span> target <span style="color:#000000">*</span> <span style="color:#010181">new_target</span><span style="color:#000000">(</span><span style="color:#0057ae">void</span><span style="color:#000000">);</span>
+</pre>
+
+
+
+<p>At the cost of one more pointer access per function call you now have totally abstracted the inner details of the structure. You are now free to change them at will. The code that doesn&#39;t know the definition of the structure can only have pointers to objects of this incomplete type and distinguish between pointers of different types, but cannot peek inside:</p>
+
+
+
+<pre>
+<span style="color:#0057ae">struct</span> foot<span style="color:#000000">;</span>
+<span style="color:#0057ae">struct</span> foot <span style="color:#000000">*</span> <span style="color:#010181">new_foot</span><span style="color:#000000">(</span><span style="color:#0057ae">void</span><span style="color:#000000">);</span>
+
+<span style="color:#0057ae">struct</span> target <span style="color:#000000">*</span> tgt <span style="color:#000000">=</span> foot<span style="color:#000000">;</span>
+<span style="color:#838183; font-style:italic">// warning: initialization from incompatible pointer type [-Wincompatible-pointer-types]</span>
+<span style="color:#000000">*</span>tgt<span style="color:#000000">;</span>
+<span style="color:#838183; font-style:italic">// error: dereferencing pointer to incomplete type ‘struct target’</span>
+</pre>
+
+
+
+<p>Of course, reading the memory is not actually forbidden, as is type casting:</p>
+
+
+
+<pre>
+<span style="color:#0057ae">struct</span> foot <span style="color:#000000">*</span> f <span style="color:#000000">=</span> <span style="color:#010181">new_foot</span><span style="color:#000000">();</span>
+<span style="color:#0057ae">char</span> buf<span style="color:#000000">[</span><span style="color:#b07e00">256</span><span style="color:#000000">];</span>
+<span style="color:#010181">memcpy</span><span style="color:#000000">(</span>buf<span style="color:#000000">,</span> foot<span style="color:#000000">,</span> <span style="color:#b07e00">42</span><span style="color:#000000">);</span> <span style="color:#838183; font-style:italic">// the user still has to guess the size of the structure, though</span>
+<span style="color:#838183; font-style:italic">// look ma, no warnings!</span>
+<span style="color:#010181">shoot</span><span style="color:#000000">((</span><span style="color:#0057ae">struct</span> target<span style="color:#000000">*)</span>foot<span style="color:#000000">);</span>
+</pre>
+
+
+
+<p>If you find yourself questioning the use of such opaque pointers, have a look at <code>FILE*</code>-related functions in the standard C library. Depending on where you got it from, the actual <code>FILE</code> may store just a file descriptor and a buffer, or a <a href="http://pubs.opengroup.org/onlinepubs/9699919799/functions/open_memstream.html">dynamically allocated buffer that is pretending it&#39;s a file</a>, or <a href="https://www.gnu.org/software/libc/manual/html_node/Streams-and-Cookies.html">something completely different</a>. And even if you only limit yourself to actual filesystems, by using <code>FILE*</code> you stop caring whether the underlying file descriptor is a <a href="https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-createfilea"><span class="caps">HANDLE</span></a> or an <a href="http://pubs.opengroup.org/onlinepubs/9699919799/functions/open.html">int</a>.</p>
+
+
+
+<pre>
+<span style="color:#0057ae">struct</span> nlopt_opt_s<span style="color:#000000">;</span>
+<span style="color:#000000; font-weight:bold">typedef</span> <span style="color:#0057ae">struct</span> nlopt_opt_s <span style="color:#000000">*</span>nlopt_opt<span style="color:#000000">;</span>
+</pre>
+
+
+
+<p>Is the same as</p>
+
+
+
+<pre>
+<span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">,</span> <span style="color:#010181">bind</span><span style="color:#000000">(</span>c<span style="color:#000000">) ::</span> nlopt_opt
+ private
+ <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>c_ptr<span style="color:#000000">) ::</span> ptr
+<span style="color:#000000; font-weight:bold">end type</span>
+</pre>
+
+
+
+<p><a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1423">C standard, &para;6.7.2.1</a></p>
+
+<blockquote><p>A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.<br />
+There may be unnamed padding within a structure object, but not at its beginning. </p></blockquote>
+				</div>
+			</content>
+		</entry>
 <entry>
 			<title>Dear developers,</title>
 			<link href="https://aitap.github.io/2018/09/12/dear.html" />
