@@ -1,5 +1,5 @@
 [% PROCESS macros.tt2 %]
-[% global.title = 'Installing Skype 8 for Linux on 32-bit Debian 9 "Stretch"' %]
+[% global.title = 'Installing Skype 8 for Linux on 32-bit Debian 9 (Stretch)' %]
 
 First things first, there are no miracles: you still need a 64-bit processor to run @skypeforlinux64.deb@. In fact, quite a lot of code we're going to install is going to be 64-bit, so let's get started:
 
