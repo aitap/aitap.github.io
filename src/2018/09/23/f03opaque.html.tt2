@@ -42,9 +42,60 @@ typedef struct nlopt_opt_s *nlopt_opt;
 
 What if we want to call the library from Fortran? The "documentation":https://nlopt.readthedocs.io/en/latest/NLopt_Fortran_Reference/ states:
 
-bq. The nlopt_opt type corresponds to integer*8. (Technically, we could use any type that is big enough to hold a pointer on all platforms; integer*8 is big enough for pointers on both 32-bit and 64-bit machines.)
+bq. The nlopt_opt type corresponds to @integer*8@. (Technically, we could use any type that is big enough to hold a pointer on all platforms; @integer*8@ is big enough for pointers on both 32-bit and 64-bit machines.)
 
-NLopt supports very old programming language standards: if you omit a few algorithms from the library, you can build it with an ANSI C compiler and then call it from a FORTRAN 77 program. This is actually good (don't you hate it when a new app requires you to upgrade your libraries, your operating system, your computer, your spouse, and your cat?), but let's try to employ some techniques for writing cleaner and safer code brought to us by Fortran 90 (modules) and Fortran 2003 (C interoperability).
+NLopt supports very old programming language standards: if you omit a few algorithms from the library, you can build it with an ANSI C compiler and then call it from a FORTRAN 77 program. This is actually good (don't you hate it when a new app requires you to upgrade your libraries, your operating system, your computer, your spouse, and your cat?), but let's try to employ some techniques for writing cleaner and safer code brought to us by Fortran 90 (derived types) and Fortran 2003 (C interoperability).
+
+The way I see recommended everywhere on the internet for wrapping opaque pointers is just to declare them on the Fortran side as @type(c_ptr)@, a type with all its fields made private that wraps @void *@. Which is not wrong: according to the C standard, any pointer may be safely casted to @void *@ and back and still compare equal to the original.
+
+A concrete example:
+
+[% WRAPPER code, lang='c' %]
+nlopt_opt nlopt_create(nlopt_algorithm algorithm, unsigned n);
+[% END %]
+
+transforms to:
+
+[% WRAPPER code, lang='f95' %]
+! this is inside an interface block of a module
+function nlopt_create(algo, n) result(opt) bind(c)
+ use, intrinsic :: iso_c_binding
+ type(c_ptr) :: opt
+ ! assume that NLOPT_NUM_ALGORUTHMS and algos were defined as enum, bind(c)
+ integer(kind(NLOPT_NUM_ALGORITHMS)), value :: algo
+ ! also, there are no unsigned integers in Fortran
+ integer(kind=c_int), value :: n
+end function
+[% END %]
+
+And this is, mostly, good enough: Fortran is usually written by "real programmers":https://en.wikipedia.org/wiki/Real_Programmers_Don't_Use_Pascal who don't confuse one @void*@ with another @type(c_ptr)@ and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let's try to make @nlopt_opt@ a distinct type in Fortran anyway.
+
+I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Let's prove a lemma:
+
+[% WRAPPER code, lang='c' %]
+typedef struct nlopt_opt_s *nlopt_opt;
+
+// is the same thing as
+
+typedef struct {
+	void * nlopt_opt_s;
+} nlopt_opt;
+
+// for bit pattern purposes
+[% END %]
+
+"C standard, &sect;6.7.2.1":http://c0x.coding-guidelines.com/6.7.2.1.html#1423 says:
+
+bq. A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.
+There may be unnamed padding within a structure object, but not at its beginning.
+
+So the beginning of our struct is guaranteed to be the same as beginning of the pointer we want to represent. What about the end? "C standard, &sect;6.7.2.1":http://c0x.coding-guidelines.com/6.7.2.1.html#1428 is less optimistic:
+
+bq. There may be unnamed padding at the end of a structure or union
+
+However, on the architectures I have access to (Linux and Windows on 32-bit and 64-bit Intel; Linux on 32-bit ARM) no padding is placed after the pointer because @void*@ is "self-aligned":http://www.catb.org/esr/structure-packing/#_alignment_requirements - alignment requirement of the pointer type is the same as the pointer size.
+
+So a struct containing a single pointer has, indeed, the same size and bit pattern as just a pointer. (Unless you are using a weird architecture that does things differently. In that case, sorry.) The difference is that we can express such a struct as an interoperable derived Fortran type:
 
 [% WRAPPER code, lang='f95' %]
 type, bind(c) :: nlopt_opt
@@ -53,7 +104,22 @@ type, bind(c) :: nlopt_opt
 end type
 [% END %]
 
-"C standard, &sect;6.7.2.1":http://c0x.coding-guidelines.com/6.7.2.1.html#1423
+Passing the structure by value is equivalent to passing the original pointer, um, by value. By marking the pointer private we ensure the original intent of opaque pointers: the implementation informaion is hidden from the library user. With that done, we can write a type-strict definition for all methods of the NLopt object:
 
-bq. A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.
-There may be unnamed padding within a structure object, but not at its beginning. 
+[% WRAPPER code, lang='f95' %]
+!NLOPT_EXTERN(nlopt_opt) nlopt_create(nlopt_algorithm algorithm, unsigned n);
+function nlopt_create(algo, n) bind(c) result(ret)
+ import nlopt_opt, c_int
+ type(nlopt_opt) :: ret
+ integer(kind(NLOPT_NUM_ALGORITHMS)), value :: algo
+ integer(c_int), value :: n
+end function
+
+!NLOPT_EXTERN(void) nlopt_destroy(nlopt_opt opt);
+subroutine nlopt_destroy(opt) bind(c)
+ import nlopt_opt
+ type(nlopt_opt), value :: opt
+end subroutine
+[% END %]
+
+Now package it all in a Fortran 90 module and you are done.

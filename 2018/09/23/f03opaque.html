@@ -74,9 +74,72 @@
 
 <p>What if we want to call the library from Fortran? The <a href="https://nlopt.readthedocs.io/en/latest/NLopt_Fortran_Reference/">documentation</a> states:</p>
 
-<blockquote><p>The nlopt_opt type corresponds to integer*8. (Technically, we could use any type that is big enough to hold a pointer on all platforms; integer*8 is big enough for pointers on both 32-bit and 64-bit machines.)</p></blockquote>
+<blockquote><p>The nlopt_opt type corresponds to <code>integer*8</code>. (Technically, we could use any type that is big enough to hold a pointer on all platforms; <code>integer*8</code> is big enough for pointers on both 32-bit and 64-bit machines.)</p></blockquote>
 
-<p>NLopt supports very old programming language standards: if you omit a few algorithms from the library, you can build it with an ANSI C compiler and then call it from a FORTRAN 77 program. This is actually good (don&#39;t you hate it when a new app requires you to upgrade your libraries, your operating system, your computer, your spouse, and your cat?), but let&#39;s try to employ some techniques for writing cleaner and safer code brought to us by Fortran 90 (modules) and Fortran 2003 (C interoperability).</p>
+<p>NLopt supports very old programming language standards: if you omit a few algorithms from the library, you can build it with an ANSI C compiler and then call it from a FORTRAN 77 program. This is actually good (don&#39;t you hate it when a new app requires you to upgrade your libraries, your operating system, your computer, your spouse, and your cat?), but let&#39;s try to employ some techniques for writing cleaner and safer code brought to us by Fortran 90 (derived types) and Fortran 2003 (C interoperability).</p>
+
+<p>The way I see recommended everywhere on the internet for wrapping opaque pointers is just to declare them on the Fortran side as <code>type(c_ptr)</code>, a type with all its fields made private that wraps <code>void *</code>. Which is not wrong: according to the C standard, any pointer may be safely casted to <code>void *</code> and back and still compare equal to the original.</p>
+
+<p>A concrete example:</p>
+
+
+
+<pre>
+nlopt_opt <span style="color:#010181">nlopt_create</span><span style="color:#000000">(</span>nlopt_algorithm algorithm<span style="color:#000000">,</span> <span style="color:#0057ae">unsigned</span> n<span style="color:#000000">);</span>
+</pre>
+
+
+
+<p>transforms to:</p>
+
+
+
+<pre>
+<span style="color:#838183; font-style:italic">! this is inside an interface block of a module</span>
+<span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">nlopt_create</span><span style="color:#000000">(</span>algo<span style="color:#000000">,</span> n<span style="color:#000000">)</span> <span style="color:#010181">result</span><span style="color:#000000">(</span>opt<span style="color:#000000">)</span> <span style="color:#010181">bind</span><span style="color:#000000">(</span>c<span style="color:#000000">)</span>
+ <span style="color:#000000; font-weight:bold">use</span><span style="color:#000000">,</span> <span style="color:#000000; font-weight:bold">intrinsic</span> <span style="color:#000000">::</span> iso_c_binding
+ <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>c_ptr<span style="color:#000000">) ::</span> opt
+ <span style="color:#838183; font-style:italic">! assume that NLOPT_NUM_ALGORUTHMS and algos were defined as enum, bind(c)</span>
+ <span style="color:#000000; font-weight:bold">integer</span><span style="color:#000000">(</span><span style="color:#010181">kind</span><span style="color:#000000">(</span>NLOPT_NUM_ALGORITHMS<span style="color:#000000">)),</span> value <span style="color:#000000">::</span> algo
+ <span style="color:#838183; font-style:italic">! also, there are no unsigned integers in Fortran</span>
+ <span style="color:#000000; font-weight:bold">integer</span><span style="color:#000000">(</span>kind<span style="color:#000000">=</span>c_int<span style="color:#000000">),</span> value <span style="color:#000000">::</span> n
+<span style="color:#000000; font-weight:bold">end function</span>
+</pre>
+
+
+
+<p>And this is, mostly, good enough: Fortran is usually written by <a href="https://en.wikipedia.org/wiki/Real_Programmers_Don&amp;#39;t_Use_Pascal">real programmers</a> who don&#39;t confuse one <code>void*</code> with another <code>type(c_ptr)</code> and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let&#39;s try to make <code>nlopt_opt</code> a distinct type in Fortran anyway.</p>
+
+<p>I couldn&#39;t express "this is a pointer to a user-defined type that&#39;s never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Let&#39;s prove a lemma:</p>
+
+
+
+<pre>
+<span style="color:#000000; font-weight:bold">typedef</span> <span style="color:#0057ae">struct</span> nlopt_opt_s <span style="color:#000000">*</span>nlopt_opt<span style="color:#000000">;</span>
+
+<span style="color:#838183; font-style:italic">// is the same thing as</span>
+
+<span style="color:#000000; font-weight:bold">typedef</span> <span style="color:#0057ae">struct</span> <span style="color:#000000">{</span>
+	<span style="color:#0057ae">void</span> <span style="color:#000000">*</span> nlopt_opt_s<span style="color:#000000">;</span>
+<span style="color:#000000">}</span> nlopt_opt<span style="color:#000000">;</span>
+
+<span style="color:#838183; font-style:italic">// for bit pattern purposes</span>
+</pre>
+
+
+
+<p><a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1423">C standard, &sect;6.7.2.1</a> says:</p>
+
+<blockquote><p>A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.<br>
+There may be unnamed padding within a structure object, but not at its beginning.</p></blockquote>
+
+<p>So the beginning of our struct is guaranteed to be the same as beginning of the pointer we want to represent. What about the end? <a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1428">C standard, &sect;6.7.2.1</a> is less optimistic:</p>
+
+<blockquote><p>There may be unnamed padding at the end of a structure or union</p></blockquote>
+
+<p>However, on the architectures I have access to (Linux and Windows on 32-bit and 64-bit Intel; Linux on 32-bit ARM) no padding is placed after the pointer because <code>void*</code> is <a href="http://www.catb.org/esr/structure-packing/#_alignment_requirements">self-aligned</a> - alignment requirement of the pointer type is the same as the pointer size.</p>
+
+<p>So a struct containing a single pointer has, indeed, the same size and bit pattern as just a pointer. (Unless you are using a weird architecture that does things differently. In that case, sorry.) The difference is that we can express such a struct as an interoperable derived Fortran type:</p>
 
 
 
@@ -89,10 +152,29 @@
 
 
 
-<p><a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1423">C standard, &sect;6.7.2.1</a></p>
+<p>Passing the structure by value is equivalent to passing the original pointer, um, by value. By marking the pointer private we ensure the original intent of opaque pointers: the implementation informaion is hidden from the library user. With that done, we can write a type-strict definition for all methods of the NLopt object:</p>
 
-<blockquote><p>A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.<br>
-There may be unnamed padding within a structure object, but not at its beginning. </p></blockquote>
+
+
+<pre>
+<span style="color:#838183; font-style:italic">!NLOPT_EXTERN(nlopt_opt) nlopt_create(nlopt_algorithm algorithm, unsigned n);</span>
+<span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">nlopt_create</span><span style="color:#000000">(</span>algo<span style="color:#000000">,</span> n<span style="color:#000000">)</span> <span style="color:#010181">bind</span><span style="color:#000000">(</span>c<span style="color:#000000">)</span> <span style="color:#010181">result</span><span style="color:#000000">(</span>ret<span style="color:#000000">)</span>
+ import nlopt_opt<span style="color:#000000">,</span> c_int
+ <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>nlopt_opt<span style="color:#000000">) ::</span> ret
+ <span style="color:#000000; font-weight:bold">integer</span><span style="color:#000000">(</span><span style="color:#010181">kind</span><span style="color:#000000">(</span>NLOPT_NUM_ALGORITHMS<span style="color:#000000">)),</span> value <span style="color:#000000">::</span> algo
+ <span style="color:#000000; font-weight:bold">integer</span><span style="color:#000000">(</span>c_int<span style="color:#000000">),</span> value <span style="color:#000000">::</span> n
+<span style="color:#000000; font-weight:bold">end function</span>
+
+<span style="color:#838183; font-style:italic">!NLOPT_EXTERN(void) nlopt_destroy(nlopt_opt opt);</span>
+<span style="color:#000000; font-weight:bold">subroutine</span> <span style="color:#010181">nlopt_destroy</span><span style="color:#000000">(</span>opt<span style="color:#000000">)</span> <span style="color:#010181">bind</span><span style="color:#000000">(</span>c<span style="color:#000000">)</span>
+ import nlopt_opt
+ <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>nlopt_opt<span style="color:#000000">),</span> value <span style="color:#000000">::</span> opt
+<span style="color:#000000; font-weight:bold">end subroutine</span>
+</pre>
+
+
+
+<p>Now package it all in a Fortran 90 module and you are done.</p>
 		</div>
 		<hr>
 		Unless otherwise specified, contents of this blog are covered by <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> license (or a later version).
