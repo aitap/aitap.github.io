@@ -86,7 +86,7 @@ for my $tpl (@ARGV ? map { path2src path $_ } @ARGV : @src) {
 	if (any { ! -e $tpl->{dst} or -M $_ < -M $tpl->{dst} } @deps) {
 		say "$tpl->{dst} doesn't exist or older than dependencies";
 		$tpl->{dst}->touchpath; # the rest of the path might not exist, either
-		$tpl->{dst}->spew(process_template($tpl->{src},1)->{content}) ;
+		$tpl->{dst}->spew_utf8(process_template($tpl->{src},1)->{content}) ;
 	}
 	say "$tpl->{src} done";
 }

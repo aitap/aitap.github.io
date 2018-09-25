@@ -21,7 +21,8 @@
 				<div xmlns="http://www.w3.org/1999/xhtml">
 					[%~ PERL ~%]
 						use Text::Textile;
-						print Text::Textile::
+						use Encode 'decode';
+						print decode utf8 => Text::Textile::
 							->new(flavor => "xhtml1", encoding => "utf-8", char_encoding => 0)
 							->process(
 								$stash->get([qw(page 0 stash 0 content 0)])
