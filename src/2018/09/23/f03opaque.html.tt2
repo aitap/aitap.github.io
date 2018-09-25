@@ -67,7 +67,7 @@ function nlopt_create(algo, n) result(opt) bind(c)
 end function
 [% END %]
 
-And this is, mostly, good enough: Fortran is usually written by "real programmers":https://en.wikipedia.org/wiki/Real_Programmers_Don't_Use_Pascal who don't confuse one @void*@ with another @type(c_ptr)@ and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let's try to make @nlopt_opt@ a distinct type in Fortran anyway.
+And this is, mostly, good enough: Fortran is usually written by "real programmers":https://en.wikipedia.org/wiki/Real_Programmers_Don%27t_Use_Pascal who don't confuse one @void*@ with another @type(c_ptr)@ and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let's try to make @nlopt_opt@ a distinct type in Fortran anyway.
 
 I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let's prove a lemma:
 
