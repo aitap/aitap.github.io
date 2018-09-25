@@ -78,7 +78,7 @@
 
 <p>NLopt supports very old programming language standards: if you omit a few algorithms from the library, you can build it with an ANSI C compiler and then call it from a FORTRAN 77 program. This is actually good (don&#39;t you hate it when a new app requires you to upgrade your libraries, your operating system, your computer, your spouse, and your cat?), but let&#39;s try to employ some techniques for writing cleaner and safer code brought to us by Fortran 90 (derived types) and Fortran 2003 (C interoperability).</p>
 
-<p>The way I see recommended everywhere on the internet for wrapping opaque pointers is just to declare them on the Fortran side as <code>type(c_ptr)</code>, a type with all its fields made private that wraps <code>void *</code>. Which is not wrong: according to the C standard, any pointer may be safely casted to <code>void *</code> and back and still compare equal to the original.</p>
+<p>The way that&#39;s usually recommended on the internet to wrap opaque pointers is just to declare them on the Fortran side as <code>type(c_ptr)</code>, a type with all its fields private that corresponds to <code>void *</code>. Which is not wrong: according to the C standard, any pointer may be safely cast to <code>void *</code> and back and still compare equal to the original.</p>
 
 <p>A concrete example:</p>
 
@@ -95,13 +95,12 @@ nlopt_opt <span style="color:#010181">nlopt_create</span><span style="color:#000
 
 
 <pre>
-<span style="color:#838183; font-style:italic">! this is inside an interface block of a module</span>
 <span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">nlopt_create</span><span style="color:#000000">(</span>algo<span style="color:#000000">,</span> n<span style="color:#000000">)</span> <span style="color:#010181">result</span><span style="color:#000000">(</span>opt<span style="color:#000000">)</span> <span style="color:#010181">bind</span><span style="color:#000000">(</span>c<span style="color:#000000">)</span>
  <span style="color:#000000; font-weight:bold">use</span><span style="color:#000000">,</span> <span style="color:#000000; font-weight:bold">intrinsic</span> <span style="color:#000000">::</span> iso_c_binding
  <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>c_ptr<span style="color:#000000">) ::</span> opt
- <span style="color:#838183; font-style:italic">! assume that NLOPT_NUM_ALGORUTHMS and algos were defined as enum, bind(c)</span>
+ <span style="color:#838183; font-style:italic">! assume that NLOPT_* algorithm enums were defined as enum, bind(c)</span>
  <span style="color:#000000; font-weight:bold">integer</span><span style="color:#000000">(</span><span style="color:#010181">kind</span><span style="color:#000000">(</span>NLOPT_NUM_ALGORITHMS<span style="color:#000000">)),</span> value <span style="color:#000000">::</span> algo
- <span style="color:#838183; font-style:italic">! also, there are no unsigned integers in Fortran</span>
+ <span style="color:#838183; font-style:italic">! also, there are no unsigned integers in Fortran, but the size matches</span>
  <span style="color:#000000; font-weight:bold">integer</span><span style="color:#000000">(</span>kind<span style="color:#000000">=</span>c_int<span style="color:#000000">),</span> value <span style="color:#000000">::</span> n
 <span style="color:#000000; font-weight:bold">end function</span>
 </pre>
@@ -110,7 +109,7 @@ nlopt_opt <span style="color:#010181">nlopt_create</span><span style="color:#000
 
 <p>And this is, mostly, good enough: Fortran is usually written by <a href="https://en.wikipedia.org/wiki/Real_Programmers_Don&amp;#39;t_Use_Pascal">real programmers</a> who don&#39;t confuse one <code>void*</code> with another <code>type(c_ptr)</code> and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let&#39;s try to make <code>nlopt_opt</code> a distinct type in Fortran anyway.</p>
 
-<p>I couldn&#39;t express "this is a pointer to a user-defined type that&#39;s never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Let&#39;s prove a lemma:</p>
+<p>I couldn&#39;t express "this is a pointer to a user-defined type that&#39;s never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let&#39;s prove a lemma:</p>
 
 
 

@@ -46,7 +46,7 @@ bq. The nlopt_opt type corresponds to @integer*8@. (Technically, we could use an
 
 NLopt supports very old programming language standards: if you omit a few algorithms from the library, you can build it with an ANSI C compiler and then call it from a FORTRAN 77 program. This is actually good (don't you hate it when a new app requires you to upgrade your libraries, your operating system, your computer, your spouse, and your cat?), but let's try to employ some techniques for writing cleaner and safer code brought to us by Fortran 90 (derived types) and Fortran 2003 (C interoperability).
 
-The way I see recommended everywhere on the internet for wrapping opaque pointers is just to declare them on the Fortran side as @type(c_ptr)@, a type with all its fields made private that wraps @void *@. Which is not wrong: according to the C standard, any pointer may be safely casted to @void *@ and back and still compare equal to the original.
+The way that's usually recommended on the internet to wrap opaque pointers is just to declare them on the Fortran side as @type(c_ptr)@, a type with all its fields private that corresponds to @void *@. Which is not wrong: according to the C standard, any pointer may be safely cast to @void *@ and back and still compare equal to the original.
 
 A concrete example:
 
@@ -57,20 +57,19 @@ nlopt_opt nlopt_create(nlopt_algorithm algorithm, unsigned n);
 transforms to:
 
 [% WRAPPER code, lang='f95' %]
-! this is inside an interface block of a module
 function nlopt_create(algo, n) result(opt) bind(c)
  use, intrinsic :: iso_c_binding
  type(c_ptr) :: opt
- ! assume that NLOPT_NUM_ALGORUTHMS and algos were defined as enum, bind(c)
+ ! assume that NLOPT_* algorithm enums were defined as enum, bind(c)
  integer(kind(NLOPT_NUM_ALGORITHMS)), value :: algo
- ! also, there are no unsigned integers in Fortran
+ ! also, there are no unsigned integers in Fortran, but the size matches
  integer(kind=c_int), value :: n
 end function
 [% END %]
 
 And this is, mostly, good enough: Fortran is usually written by "real programmers":https://en.wikipedia.org/wiki/Real_Programmers_Don't_Use_Pascal who don't confuse one @void*@ with another @type(c_ptr)@ and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let's try to make @nlopt_opt@ a distinct type in Fortran anyway.
 
-I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Let's prove a lemma:
+I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let's prove a lemma:
 
 [% WRAPPER code, lang='c' %]
 typedef struct nlopt_opt_s *nlopt_opt;
