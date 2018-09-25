@@ -17,11 +17,11 @@
 	<body>
 		<h1>Starting an R cluster node on Windows</h1>
 		<div class="content">
-			<p>Core R package <a href="http://stat.ethz.ch/R-manual/R-devel/library/parallel/doc/parallel.pdf">parallel</a> makes it possible to run trivially parallel tasks on clusters of mostly independent workers. There are many articles on the Internet about connecting to an R cluster from a Windows machine. Today we&#39;re going to use a Windows machine as a cluster node, instead.</p>
+			<p>Core R package <a href="http://stat.ethz.ch/R-manual/R-devel/library/parallel/doc/parallel.pdf">parallel</a> makes it possible to run trivially parallel tasks on clusters of mostly independent workers. There are many articles on the Internet about connecting to an R cluster from a Windows machine. Today we're going to use a Windows machine as a cluster node, instead.</p>
 
-<p>Function <code>makeCluster</code> requires some kind of way of running command lines on the cluster node (unless you pass <code>manual=TRUE</code> and follow the instructions). <a href="https://en.wikipedia.org/wiki/Secure_Shell">SSH</a> is a good way to do that securely. I&#39;m going to use <a href="https://cygwin.com/">Cygwin</a> because it doesn&#39;t require administrative privileges to install or run. Make sure you install the <code>openssh</code> package.</p>
+<p>Function <code>makeCluster</code> requires some kind of way of running command lines on the cluster node (unless you pass <code>manual=TRUE</code> and follow the instructions). <a href="https://en.wikipedia.org/wiki/Secure_Shell">SSH</a> is a good way to do that securely. I'm going to use <a href="https://cygwin.com/">Cygwin</a> because it doesn't require administrative privileges to install or run. Make sure you install the <code>openssh</code> package.</p>
 
-<p>Here&#39;s the custom config file <code>/home/WinUserName/sshd/sshd_config</code> we are going to start <code>sshd</code> with:</p>
+<p>Here's the custom config file <code>/home/WinUserName/sshd/sshd_config</code> we are going to start <code>sshd</code> with:</p>
 
 
 
@@ -39,7 +39,7 @@ HostKey /home/WinUserName/sshd/hostkey
 
 <p>Use <code>ssh-keygen -f /home/WinUserName/sshd/hostkey</code> to generate the identity key of our SSH server.</p>
 
-<p>Since we&#39;re going noninteractive, let&#39;s create our own client key we&#39;re going to authenticate with and make it known to both sides of the connection. On the client, generate a key using <code>ssh-keygen</code> and add the following to <code>~/.ssh/config</code>:</p>
+<p>Since we're going noninteractive, let's create our own client key we're going to authenticate with and make it known to both sides of the connection. On the client, generate a key using <code>ssh-keygen</code> and add the following to <code>~/.ssh/config</code>:</p>
 
 
 
@@ -74,7 +74,7 @@ Host win-cluster-node
 
 <p>Place it to <code>/home/WinUserName/Rscript.sh</code> and make it executable using <code>chmod +x</code>.</p>
 
-<p>All the puzzle pieces are in place now, let&#39;s start the cluster:</p>
+<p>All the puzzle pieces are in place now, let's start the cluster:</p>
 
 
 
@@ -86,7 +86,7 @@ cluster <span style="color:#000000">&lt;-</span> <span style="color:#010181">mak
 
 
 
-<p>Let&#39;s see if it works:</p>
+<p>Let's see if it works:</p>
 
 
 

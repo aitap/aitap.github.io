@@ -17,7 +17,7 @@
 	<body>
 		<h1>Installing Skype 8 for Linux on 32-bit Debian 9 "Stretch"</h1>
 		<div class="content">
-			<p>First things first, there are no miracles: you still need a 64-bit processor to run <code>skypeforlinux64.deb</code>. In fact, quite a lot of code we&#39;re going to install is going to be 64-bit, so let&#39;s get started:</p>
+			<p>First things first, there are no miracles: you still need a 64-bit processor to run <code>skypeforlinux64.deb</code>. In fact, quite a lot of code we're going to install is going to be 64-bit, so let's get started:</p>
 
 
 
@@ -31,7 +31,7 @@ apt <span style="color:#000000; font-weight:bold">install</span> linux-image-amd
 
 
 
-<p>Now reboot into the new kernel (make sure of that in the bootloader menu). Make sure that everything works because we&#39;re going to use only <code>amd64</code> kernel from now on.</p>
+<p>Now reboot into the new kernel (make sure of that in the bootloader menu). Make sure that everything works because we're going to use only <code>amd64</code> kernel from now on.</p>
 
 
 
@@ -55,7 +55,7 @@ apt <span style="color:#000000">--</span>purge autoremove
 
 
 
-<p>If you run the above commands, you&#39;ll find out that <code>apt</code> suggests you to wipe half of the package management system (but has enough courtesy to warn you that it may not be the right thing to do, so can you please type that you know what you are doing first?)</p>
+<p>If you run the above commands, you'll find out that <code>apt</code> suggests you to wipe half of the package management system (but has enough courtesy to warn you that it may not be the right thing to do, so can you please type that you know what you are doing first?)</p>
 
 <p>What the hell?</p>
 
@@ -73,7 +73,7 @@ apt <span style="color:#000000">--</span>purge autoremove
 
 </ol>
 
-<p>But that&#39;s nonsense, you&#39;d say. (At least, I would.) <code>apt-trasport-https</code> provides, basically, a single executable, <code>/usr/lib/apt/methods/https</code>, which can be called by 32-bit APT to download whatever APT wants to download via HTTPS. There is no reason for it to be a 64-bit executable on a (mostly) 32-bit system. Can we ask APT to keep the 32-bit version?</p>
+<p>But that's nonsense, you'd say. (At least, I would.) <code>apt-trasport-https</code> provides, basically, a single executable, <code>/usr/lib/apt/methods/https</code>, which can be called by 32-bit APT to download whatever APT wants to download via HTTPS. There is no reason for it to be a 64-bit executable on a (mostly) 32-bit system. Can we ask APT to keep the 32-bit version?</p>
 
 <p>Almost.</p>
 
@@ -88,12 +88,12 @@ The package is not co-installable and <em>should be allowed to satisfy the depen
 <li>Take the original <code>apt-transport-https_VERSION_i386.deb</code></li>
 <li>Use <code>ar</code> to extract <code>control.tar.gz</code></li>
 <li>Extract <code>./control</code> from <code>control.tar.gz</code></li>
-<li>Patch in the missing line and increment the version while you&#39;re at it</li>
+<li>Patch in the missing line and increment the version while you're at it</li>
 <li>Try to fit the guts back before abyone notices</li>
 <li>Install the resulting package</li>
 </ol>
 
-<p>Perhaps it even could work. But we&#39;re building our own version of <code>apt-transport-https</code> from source, just for the sake of one line in the package description. Silly, I know.</p>
+<p>Perhaps it even could work. But we're building our own version of <code>apt-transport-https</code> from source, just for the sake of one line in the package description. Silly, I know.</p>
 
 
 
@@ -120,9 +120,9 @@ dpkg-buildpackage <span style="color:#000000">-</span>uc <span style="color:#000
 
 
 
-<p>Go grab a cup of coffee. (Or, preferrably, something without any caffeine, because your pulse must be racing from stress at this point.) APT is written in C++ and contains a lot of translation strings, so don&#39;t expect the build process to be done instantaneously.</p>
+<p>Go grab a cup of coffee. (Or, preferrably, something without any caffeine, because your pulse must be racing from stress at this point.) APT is written in C++ and contains a lot of translation strings, so don't expect the build process to be done instantaneously.</p>
 
-<p>Is it done yet? On my machine the build process additionally warned about some translations not being good enough and then crashed because of missing <code>usr/share/man/*/*/apt-something-something.*</code>. Notice the double <code>*/*/</code>: those must have been the translated man pages. I had to remove the offending lines from <code>debian/*.install</code>. It&#39;s not like I&#39;m even going to install those packages: I just need the patched <code>apt-transport-https</code>. After I applied the fix, I ran <code>fakeroot debian/rules binary</code> to restart the process from approximately where it stopped at.</p>
+<p>Is it done yet? On my machine the build process additionally warned about some translations not being good enough and then crashed because of missing <code>usr/share/man/*/*/apt-something-something.*</code>. Notice the double <code>*/*/</code>: those must have been the translated man pages. I had to remove the offending lines from <code>debian/*.install</code>. It's not like I'm even going to install those packages: I just need the patched <code>apt-transport-https</code>. After I applied the fix, I ran <code>fakeroot debian/rules binary</code> to restart the process from approximately where it stopped at.</p>
 
 <p>Is it done now? Finally, you can install the multi-arch-aware <code>apt-transport-https</code>:</p>
 
