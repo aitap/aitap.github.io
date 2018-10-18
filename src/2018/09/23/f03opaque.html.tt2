@@ -69,7 +69,7 @@ end function
 
 And this is, mostly, good enough: Fortran is usually written by "real programmers":https://en.wikipedia.org/wiki/Real_Programmers_Don%27t_Use_Pascal who don't confuse one @void*@ with another @type(c_ptr)@ and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let's try to make @nlopt_opt@ a distinct type in Fortran anyway.
 
-I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let's prove a lemma:
+I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. <strike>We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let's prove a lemma:
 
 [% WRAPPER code, lang='c' %]
 typedef struct nlopt_opt_s *nlopt_opt;
@@ -119,6 +119,34 @@ subroutine nlopt_destroy(opt) bind(c)
  import nlopt_opt
  type(nlopt_opt), value :: opt
 end subroutine
+[% END %]
+
+</strike>
+
+Unfortunately, the code described above, despite working on my machine, is "incorrect":https://stackoverflow.com/a/52577289. While on some machines a @struct whatever *@ gets passed in the same way a @struct { void * ptr; }@ would, it is in no way guaranteed that rules for returning primitive and aggregate types would remain same, despite them having the same size and alignment.
+
+Therefore, the correct solution is either to continue using @type(c_ptr)@ with no distinction between kinds of @void*@, or to create a proper devived type and write a bunch of wrapper functions, hoping that they would get inlined by other code. You can also declare a finalizer or even rewrite all C procedure calls into object methods:
+
+[% WRAPPER code, lang='f95' %]
+type :: nlopt_opt
+ private
+ type(c_ptr) :: ptr = C_NULL_PTR
+contains
+ procedure :: set_xtol_rel ! add more methods here
+ final :: destroy
+end type nlopt_opt
+
+subroutine destroy(this)
+ class(nlopt_opt) :: this
+ interface
+  subroutine nlopt_destroy(opt) bind(c)
+   import nlopt_opt
+   type(nlopt_opt), value :: opt
+  end subroutine
+ end interface
+
+ call nlopt_destroy(this%ptr)
+end subroutine destroy
 [% END %]
 
 Now package it all in a Fortran 90 module and you are done.
