@@ -1,0 +1,13 @@
+[% global.title = 'Modern Ultra-mobile PCs' %]
+
+The market of sub-11" laptops, also known as "UMPCs":https://en.wikipedia.org/wiki/UMPC, seems almost non-existent nowadays, but it is not completely devoid of life. Moreover, 2018 saw the emergence of new UMPC models, most of them produced in China. Here I will try to summarize the available spectrum of modern models:
+
+* "Pyra handheld":https://pyra-handheld.com/boards/pages/pyra/ (pre-order)
+* "GPD Pocket":https://gpd.hk/gpdpocket
+* "GPD Pocket 2":https://gpd.hk/gpdpocket2
+* "GPD Win 2":http://gpd.hk/gdpwin2 (there also was GPD Win 1, but it doesn't seem to be sold anymore)
+* "One-Notebook OneMix Yoga":http://en.one-netbook.com/OneMix/
+* "One-Notebook OneMix 2 Yoga":https://www.geekbuying.com/item/One-Netbook-One-Mix-2-Yoga-Pocket-Laptop-Intel-Core-M3-Touch-ID-Silver-405731.html (pre-order)
+* "Gemini PDA":https://www.planetcom.co.uk/
+
+<!-- TODO: make a table with prices and characteristics -->

@@ -3,11 +3,33 @@
 	<title>Perhaps I should start a blog</title>
 	<link href="https://aitap.github.io/" />
 	<id>https://aitap.github.io/atom.xml</id> <!-- it's an IRI all right -->
-	<updated>2018-09-25T00:00:00Z</updated>
+	<updated>2018-10-23T00:00:00Z</updated>
 	<author>
 		<name>Ivan Krylov</name>
 		<email>krylov.r00t@gmail.com</email>
 	</author>
+<entry>
+			<title>Modern Ultra-mobile PCs</title>
+			<link href="https://aitap.github.io/2018/10/23/umpc.html" />
+			<id>https://aitap.github.io/2018/10/23/umpc.html</id> <!-- unique enough -->
+			<updated>2018-10-23T00:00:00Z</updated>
+			<content type="xhtml">
+				<div xmlns="http://www.w3.org/1999/xhtml"><p>The market of sub-11" laptops, also known as https://en.wikipedia.org/wiki/UMPC:"UMPC"s, seems almost non-existent nowadays, but it is not completely devoid of life. Moreover, 2018 saw the emergence of new <span class="caps">UMPC </span>models, most of them produced in China. Here I will try to summarize the available spectrum of modern models:</p>
+
+<ul>
+<li>https://pyra-handheld.com/boards/pages/pyra/:"Pyra handheld" (pre-order)</li>
+<li>https://gpd.hk/gpdpocket:"GPD Pocket"</li>
+<li>https://gpd.hk/gpdpocket2:"GPD Pocket 2"</li>
+<li>http://gpd.hk/gdpwin2:"GPD Win 2" (there also was <span class="caps">GPD</span> Win 1, but it doesn't seem to be sold anymore)</li>
+<li>http://en.one-netbook.com/OneMix/:"One-Notebook OneMix Yoga"</li>
+<li>https://www.geekbuying.com/item/One-Netbook-One-Mix-2-Yoga-Pocket-Laptop-Intel-Core-M3-Touch-ID-Silver-405731.html:"One-Notebook OneMix 2 Yoga" (pre-order)</li>
+<li>https://www.planetcom.co.uk/:"Gemini <span class="caps">PDA</span>"</li>
+</ul>
+
+<!-- TODO: make a table with prices and characteristics -->
+				</div>
+			</content>
+		</entry>
 <entry>
 			<title>Wrapping C opaque pointers in Fortran 2003 in type-strict way</title>
 			<link href="https://aitap.github.io/2018/09/23/f03opaque.html" />
@@ -104,9 +126,9 @@ nlopt_opt <span style="color:#010181">nlopt_create</span><span style="color:#000
 
 
 
-<p>And this is, mostly, good enough: Fortran is usually written by <a href="https://en.wikipedia.org/wiki/Real_Programmers_Don">real programmers</a>'t_Use_Pascal who don't confuse one <code>void*</code> with another <code>type(c_ptr)</code> and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let's try to make <code>nlopt_opt</code> a distinct type in Fortran anyway.</p>
+<p>And this is, mostly, good enough: Fortran is usually written by <a href="https://en.wikipedia.org/wiki/Real_Programmers_Don%27t_Use_Pascal">real programmers</a> who don't confuse one <code>void*</code> with another <code>type(c_ptr)</code> and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let's try to make <code>nlopt_opt</code> a distinct type in Fortran anyway.</p>
 
-<p>I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let's prove a lemma:</p>
+<p>I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. <strike>We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let's prove a lemma:</p>
 
 
 
@@ -166,6 +188,38 @@ There may be unnamed padding within a structure object, but not at its beginning
  import nlopt_opt
  <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>nlopt_opt<span style="color:#000000">),</span> value <span style="color:#000000">::</span> opt
 <span style="color:#000000; font-weight:bold">end subroutine</span>
+</pre>
+
+
+
+<p></strike></p>
+
+<p>Unfortunately, the code described above, despite working on my machine, is <a href="https://stackoverflow.com/a/52577289">incorrect</a>. While on some machines a <code>struct whatever *</code> gets passed in the same way a <code>struct { void * ptr; }</code> would, it is in no way guaranteed that rules for returning primitive and aggregate types would remain same, despite them having the same size and alignment.</p>
+
+<p>Therefore, the correct solution is either to continue using <code>type(c_ptr)</code> with no distinction between kinds of <code>void*</code>, or to create a proper devived type and write a bunch of wrapper functions, hoping that they would get inlined by other code. You can also declare a finalizer or even rewrite all C procedure calls into object methods:</p>
+
+
+
+<pre>
+<span style="color:#000000; font-weight:bold">type</span> <span style="color:#000000">::</span> nlopt_opt
+ private
+ <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>c_ptr<span style="color:#000000">) ::</span> ptr <span style="color:#000000">=</span> C_NULL_PTR
+<span style="color:#000000; font-weight:bold">contains</span>
+ procedure <span style="color:#000000">::</span> set_xtol_rel <span style="color:#838183; font-style:italic">! add more methods here</span>
+ final <span style="color:#000000">::</span> destroy
+<span style="color:#000000; font-weight:bold">end type</span> nlopt_opt
+
+<span style="color:#000000; font-weight:bold">subroutine</span> <span style="color:#010181">destroy</span><span style="color:#000000">(</span>this<span style="color:#000000">)</span>
+ <span style="color:#010181">class</span><span style="color:#000000">(</span>nlopt_opt<span style="color:#000000">) ::</span> this
+ <span style="color:#000000; font-weight:bold">interface</span>
+  <span style="color:#000000; font-weight:bold">subroutine</span> <span style="color:#010181">nlopt_destroy</span><span style="color:#000000">(</span>opt<span style="color:#000000">)</span> <span style="color:#010181">bind</span><span style="color:#000000">(</span>c<span style="color:#000000">)</span>
+   import nlopt_opt
+   <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>nlopt_opt<span style="color:#000000">),</span> value <span style="color:#000000">::</span> opt
+  <span style="color:#000000; font-weight:bold">end subroutine</span>
+ <span style="color:#000000; font-weight:bold">end interface</span>
+
+ <span style="color:#000000; font-weight:bold">call</span> <span style="color:#010181">nlopt_destroy</span><span style="color:#000000">(</span>this<span style="color:#000000">%</span>ptr<span style="color:#000000">)</span>
+<span style="color:#000000; font-weight:bold">end subroutine</span> destroy
 </pre>
 
 
