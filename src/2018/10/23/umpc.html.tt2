@@ -2,12 +2,14 @@
 
 The market of sub-11" laptops, also known as "UMPCs":https://en.wikipedia.org/wiki/UMPC, seems almost non-existent nowadays, but it is not completely devoid of life. Moreover, 2018 saw the emergence of new UMPC models, most of them produced in China. Here I will try to summarize the available spectrum of modern models:
 
-* "Pyra handheld":https://pyra-handheld.com/boards/pages/pyra/ (pre-order)
 * "GPD Pocket":https://gpd.hk/gpdpocket
 * "GPD Pocket 2":https://gpd.hk/gpdpocket2
 * "GPD Win 2":http://gpd.hk/gdpwin2 (there also was GPD Win 1, but it doesn't seem to be sold anymore)
 * "One-Notebook OneMix Yoga":http://en.one-netbook.com/OneMix/
 * "One-Notebook OneMix 2 Yoga":https://www.geekbuying.com/item/One-Netbook-One-Mix-2-Yoga-Pocket-Laptop-Intel-Core-M3-Touch-ID-Silver-405731.html (pre-order)
 * "Gemini PDA":https://www.planetcom.co.uk/
+
+|_. Name |_. Price |_. Processor |_. RAM |_. Size |_. Notes |
+| "Pyra handheld":https://pyra-handheld.com/boards/pages/pyra/ | 500-626€ (pre-order) | ARM: TI OMAP 5 (2x Cortex-A15 + 2x Cortex-M4 + PowerVR™ SGX544-MP2 + Vivante GC320) | 2-4G | 139 x 87 x 32 mm | More like a game console. Optional 3G/4G/UMTS+GPS. Replaceable battery, CPU. Keyboard for thumb-typing. Open source hardware. |
 
 <!-- TODO: make a table with prices and characteristics -->
