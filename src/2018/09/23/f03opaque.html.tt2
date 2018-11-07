@@ -69,7 +69,7 @@ end function
 
 And this is, mostly, good enough: Fortran is usually written by "real programmers":https://en.wikipedia.org/wiki/Real_Programmers_Don%27t_Use_Pascal who don't confuse one @void*@ with another @type(c_ptr)@ and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let's try to make @nlopt_opt@ a distinct type in Fortran anyway.
 
-I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. <strike>We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let's prove a lemma:
+I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. <del>We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let's prove a lemma:</del>
 
 [% WRAPPER code, lang='c' %]
 typedef struct nlopt_opt_s *nlopt_opt;
@@ -83,18 +83,26 @@ typedef struct {
 // for bit pattern purposes
 [% END %]
 
+<del>
 "C standard, §6.7.2.1":http://c0x.coding-guidelines.com/6.7.2.1.html#1423 says:
+</del>
 
-bq. A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.
-There may be unnamed padding within a structure object, but not at its beginning.
+bq. <del>A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.
+There may be unnamed padding within a structure object, but not at its beginning.</del>
 
+<del>
 So the beginning of our struct is guaranteed to be the same as beginning of the pointer we want to represent. What about the end? "C standard, §6.7.2.1":http://c0x.coding-guidelines.com/6.7.2.1.html#1428 is less optimistic:
+</del>
 
-bq. There may be unnamed padding at the end of a structure or union
+bq. <del>There may be unnamed padding at the end of a structure or union</del>
 
+<del>
 However, on the architectures I have access to (Linux and Windows on 32-bit and 64-bit Intel; Linux on 32-bit ARM) no padding is placed after the pointer because @void*@ is "self-aligned":http://www.catb.org/esr/structure-packing/#_alignment_requirements - alignment requirement of the pointer type is the same as the pointer size.
+</del>
 
+<del>
 So a struct containing a single pointer has, indeed, the same size and bit pattern as just a pointer. (Unless you are using a weird architecture that does things differently. In that case, sorry.) The difference is that we can express such a struct as an interoperable derived Fortran type:
+</del>
 
 [% WRAPPER code, lang='f95' %]
 type, bind(c) :: nlopt_opt
@@ -103,7 +111,9 @@ type, bind(c) :: nlopt_opt
 end type
 [% END %]
 
+<del>
 Passing the structure by value is equivalent to passing the original pointer, um, by value. By marking the pointer private we ensure the original intent of opaque pointers: the implementation informaion is hidden from the library user. With that done, we can write a type-strict definition for all methods of the NLopt object:
+</del>
 
 [% WRAPPER code, lang='f95' %]
 !NLOPT_EXTERN(nlopt_opt) nlopt_create(nlopt_algorithm algorithm, unsigned n);
@@ -121,11 +131,13 @@ subroutine nlopt_destroy(opt) bind(c)
 end subroutine
 [% END %]
 
-</strike>
-
+<ins>
 Unfortunately, the code described above, despite working on my machine, is "incorrect":https://stackoverflow.com/a/52577289. While on some machines a @struct whatever *@ gets passed in the same way a @struct { void * ptr; }@ would, it is in no way guaranteed that rules for returning primitive and aggregate types would remain same, despite them having the same size and alignment.
+</ins>
 
+<ins>
 Therefore, the correct solution is either to continue using @type(c_ptr)@ with no distinction between kinds of @void*@, or to create a proper devived type and write a bunch of wrapper functions, hoping that they would get inlined by other code. You can also declare a finalizer or even rewrite all C procedure calls into object methods:
+</ins>
 
 [% WRAPPER code, lang='f95' %]
 type :: nlopt_opt

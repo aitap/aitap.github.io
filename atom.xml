@@ -121,7 +121,7 @@ nlopt_opt <span style="color:#010181">nlopt_create</span><span style="color:#000
 
 <p>And this is, mostly, good enough: Fortran is usually written by <a href="https://en.wikipedia.org/wiki/Real_Programmers_Don%27t_Use_Pascal">real programmers</a> who don't confuse one <code>void*</code> with another <code>type(c_ptr)</code> and if you actually have more than one kind of opaque C pointer in your program, why are you still writing Fortran? But let's try to make <code>nlopt_opt</code> a distinct type in Fortran anyway.</p>
 
-<p>I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let's prove a lemma:</p>
+<p>I couldn't express "this is a pointer to a user-defined type that's never actually defined" in Fortran in a way that would still be interoperable with C. <del>We will have to create a fully-defined derived type and make it behave exactly as an opaque pointer would. Before we do that, let's prove a lemma:</del></p>
 
 
 
@@ -139,18 +139,26 @@ nlopt_opt <span style="color:#010181">nlopt_create</span><span style="color:#000
 
 
 
-<p><a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1423">C standard, §6.7.2.1</a> says:</p>
+<p><del><br />
+<a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1423">C standard, §6.7.2.1</a> says:<br />
+</del></p>
 
-<blockquote><p>A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.<br />
-There may be unnamed padding within a structure object, but not at its beginning.</p></blockquote>
+<blockquote><p><del>A pointer to a structure object, suitably converted, points to its initial member (or if that member is a bit-field, then to the unit in which it resides), and vice versa.<br />
+There may be unnamed padding within a structure object, but not at its beginning.</del></p></blockquote>
 
-<p>So the beginning of our struct is guaranteed to be the same as beginning of the pointer we want to represent. What about the end? <a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1428">C standard, §6.7.2.1</a> is less optimistic:</p>
+<p><del><br />
+So the beginning of our struct is guaranteed to be the same as beginning of the pointer we want to represent. What about the end? <a href="http://c0x.coding-guidelines.com/6.7.2.1.html#1428">C standard, §6.7.2.1</a> is less optimistic:<br />
+</del></p>
 
-<blockquote><p>There may be unnamed padding at the end of a structure or union</p></blockquote>
+<blockquote><p><del>There may be unnamed padding at the end of a structure or union</del></p></blockquote>
 
-<p>However, on the architectures I have access to (Linux and Windows on 32-bit and 64-bit Intel; Linux on 32-bit <span class="caps">ARM</span>) no padding is placed after the pointer because <code>void*</code> is <a href="http://www.catb.org/esr/structure-packing/#_alignment_requirements">self-aligned</a> - alignment requirement of the pointer type is the same as the pointer size.</p>
+<p><del><br />
+However, on the architectures I have access to (Linux and Windows on 32-bit and 64-bit Intel; Linux on 32-bit <span class="caps">ARM</span>) no padding is placed after the pointer because <code>void*</code> is <a href="http://www.catb.org/esr/structure-packing/#_alignment_requirements">self-aligned</a> - alignment requirement of the pointer type is the same as the pointer size.<br />
+</del></p>
 
-<p>So a struct containing a single pointer has, indeed, the same size and bit pattern as just a pointer. (Unless you are using a weird architecture that does things differently. In that case, sorry.) The difference is that we can express such a struct as an interoperable derived Fortran type:</p>
+<p><del><br />
+So a struct containing a single pointer has, indeed, the same size and bit pattern as just a pointer. (Unless you are using a weird architecture that does things differently. In that case, sorry.) The difference is that we can express such a struct as an interoperable derived Fortran type:<br />
+</del></p>
 
 
 
@@ -163,7 +171,9 @@ There may be unnamed padding within a structure object, but not at its beginning
 
 
 
-<p>Passing the structure by value is equivalent to passing the original pointer, um, by value. By marking the pointer private we ensure the original intent of opaque pointers: the implementation informaion is hidden from the library user. With that done, we can write a type-strict definition for all methods of the NLopt object:</p>
+<p><del><br />
+Passing the structure by value is equivalent to passing the original pointer, um, by value. By marking the pointer private we ensure the original intent of opaque pointers: the implementation informaion is hidden from the library user. With that done, we can write a type-strict definition for all methods of the NLopt object:<br />
+</del></p>
 
 
 
@@ -181,6 +191,40 @@ There may be unnamed padding within a structure object, but not at its beginning
  import nlopt_opt
  <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>nlopt_opt<span style="color:#000000">),</span> value <span style="color:#000000">::</span> opt
 <span style="color:#000000; font-weight:bold">end subroutine</span>
+</pre>
+
+
+
+<p><ins><br />
+Unfortunately, the code described above, despite working on my machine, is <a href="https://stackoverflow.com/a/52577289">incorrect</a>. While on some machines a <code>struct whatever *</code> gets passed in the same way a <code>struct { void * ptr; }</code> would, it is in no way guaranteed that rules for returning primitive and aggregate types would remain same, despite them having the same size and alignment.<br />
+</ins></p>
+
+<p><ins><br />
+Therefore, the correct solution is either to continue using <code>type(c_ptr)</code> with no distinction between kinds of <code>void*</code>, or to create a proper devived type and write a bunch of wrapper functions, hoping that they would get inlined by other code. You can also declare a finalizer or even rewrite all C procedure calls into object methods:<br />
+</ins></p>
+
+
+
+<pre>
+<span style="color:#000000; font-weight:bold">type</span> <span style="color:#000000">::</span> nlopt_opt
+ private
+ <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>c_ptr<span style="color:#000000">) ::</span> ptr <span style="color:#000000">=</span> C_NULL_PTR
+<span style="color:#000000; font-weight:bold">contains</span>
+ procedure <span style="color:#000000">::</span> set_xtol_rel <span style="color:#838183; font-style:italic">! add more methods here</span>
+ final <span style="color:#000000">::</span> destroy
+<span style="color:#000000; font-weight:bold">end type</span> nlopt_opt
+
+<span style="color:#000000; font-weight:bold">subroutine</span> <span style="color:#010181">destroy</span><span style="color:#000000">(</span>this<span style="color:#000000">)</span>
+ <span style="color:#010181">class</span><span style="color:#000000">(</span>nlopt_opt<span style="color:#000000">) ::</span> this
+ <span style="color:#000000; font-weight:bold">interface</span>
+  <span style="color:#000000; font-weight:bold">subroutine</span> <span style="color:#010181">nlopt_destroy</span><span style="color:#000000">(</span>opt<span style="color:#000000">)</span> <span style="color:#010181">bind</span><span style="color:#000000">(</span>c<span style="color:#000000">)</span>
+   import nlopt_opt
+   <span style="color:#000000; font-weight:bold">type</span><span style="color:#000000">(</span>nlopt_opt<span style="color:#000000">),</span> value <span style="color:#000000">::</span> opt
+  <span style="color:#000000; font-weight:bold">end subroutine</span>
+ <span style="color:#000000; font-weight:bold">end interface</span>
+
+ <span style="color:#000000; font-weight:bold">call</span> <span style="color:#010181">nlopt_destroy</span><span style="color:#000000">(</span>this<span style="color:#000000">%</span>ptr<span style="color:#000000">)</span>
+<span style="color:#000000; font-weight:bold">end subroutine</span> destroy
 </pre>
 
 
