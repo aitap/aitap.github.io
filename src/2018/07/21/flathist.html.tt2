@@ -109,6 +109,8 @@ Most of the image was background, so our signal is whitened out. Instead, we see
 
 Try histogram flattening on your own data to see if there's any patterns lurking in the middle of the bell curve!
 
+<!-- TODO: maybe I should have used breaks= argument of image() function -->
+
 fn1. This is the opposite of what you usually see on false-color images: the most different values are ones at the far end of the bell curve of the distribution.
 
 fn2. But see @zlim=c(min,max)@ argument of @image(...)@ function.
