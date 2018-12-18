@@ -3,11 +3,21 @@
 	<title>Perhaps I should start a blog</title>
 	<link href="https://aitap.github.io/" />
 	<id>https://aitap.github.io/atom.xml</id> <!-- it's an IRI all right -->
-	<updated>2018-11-25T00:00:00Z</updated>
+	<updated>2018-12-18T00:00:00Z</updated>
 	<author>
 		<name>Ivan Krylov</name>
 		<email>krylov.r00t@gmail.com</email>
 	</author>
+<entry>
+			<title>Not Invented Here</title>
+			<link href="https://aitap.github.io/2018/12/19/nih.html" />
+			<id>https://aitap.github.io/2018/12/19/nih.html</id> <!-- unique enough -->
+			<updated>2018-12-19T00:00:00Z</updated>
+			<content type="xhtml">
+				<div xmlns="http://www.w3.org/1999/xhtml"><p>My Not Invented Here syndrome will some day be the end of me.</p>
+				</div>
+			</content>
+		</entry>
 <entry>
 			<title>Modern Ultra-mobile PCs</title>
 			<link href="https://aitap.github.io/2018/10/23/umpc.html" />
