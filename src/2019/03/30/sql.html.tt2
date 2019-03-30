@@ -1,0 +1,87 @@
+[% PROCESS macros.tt2 %]
+[% global.title = 'Some things should not be expressed in SQL' %]
+
+I have a confession to make.
+
+I have been heavily abusing SQL. It had started a few years ago when I wanted to make a website and some guy told me to try soft stuff like SQLite. It was easy to get hold of, the promised effects happened very easily (want full text search on a small website? @CREATE VIRTUAL TABLE search USING fts4(fulltext, title, tokenize=unicode61)'@ and you are done!), and there seemed to be no withdrawal.
+
+Since them I have been using SQLite in every few of my projects (despite telling myself that I can get by without it), sometimes even as a dumb key-value store with no indexes (tried BDB, but the comedowns caused by incorrect linking between different compilers made my application vomit, so I stopped).
+
+This brings us to my latest project. I have two text files, one 1.5M gzipped, another 25M xz-compressed, containing fundamental physical data obtained by different methods and compiled by different people. The datasets partially intersect - this is a fact - but it is impossible to find exact relations between entries with 100% because their string descriptions were produced using two different theories and encoded using different (and not precisely specified) encoding rules.
+
+Instead, I have to resort to imprecice matching by parameter values: if the values (of type REAL, of course) are "close enough", I should consider them the same. How close is close enough? Let's find out: for each line from one dataset, let's find out the mininal difference to any of the lines from the other dataset:
+
+[% WRAPPER code, lang => 'sql' %]
+create table minimal_cost as
+select
+	a.id as a_id, b.id as b_id,
+	a.param1 as a_param1, b.param1 as b_param1
+	a.param2 as a_param2, b.param2 as b_param2
+from physparams a, physparams b
+where
+	a.src_id = 2
+	and b.src_id = 1
+	and (
+		-- thankfully, param1 and param2 have similar scales, or I'd have to invent a complex cost function
+		select min(abs(bb.param1-a.param1) + abs(bb.param2-a.param2))
+		from physparams bb
+		where
+			bb.src_id = 1
+			and bb.param3 = a.param4
+			and bb.param4 = a.param4 -- these are INTEGER
+	) = (abs(b.param1-a.param1) + abs(b.param2-a.param2))
+;
+[% END %]
+
+This is about the opposite of relational databases do well: instead of using an established relation between tuples helped by indices, the database engine has to find one out, and there is no possible index one could use to speed it up. Well, apart from computing the whole [% TeX('O(mn)') %] array of distances, which would have around [% TeX('9.7 \cdot 10^{10}') %] entries for the two datasets.
+
+I had abused SQLite's ability to @select id, min(whatever)@ and have the id of the row that had *the* minimal value of @whatever@ and finished the query overnight on a small subset of the data. For the whole dataset, I spent a whole day looking at PostgreSQL eating one CPU core.
+
+After a while, it dawned on me that I was acting under the SQL influence and it was going to harm me if I didn't stop right now. So I killed the query, blew the dust off good ol' Perl and dumped everything I wanted to compare into a binary file:
+
+[% WRAPPER code, lang => 'perl' %]
+my $get = $db->prepare('select id, param1, param2, param3, param4 from physparams where src_id = ?');
+$get->bind_columns(\my($id, $param1 $param2, $param3, $param4));
+
+open my $fh, ">:raw", "db1.bin";
+$get->execute(1);
+print $fh pack "LLLdd", $id, $param3, $param4, $param1, $param2
+	while $get->fetch;
+[% END %]
+
+then powered up C and ran the [% TeX('O(mn)') %] operation on raw data:
+
+[% WRAPPER code, lang => 'perl' %]
+/* auxillary code omitted for the sake of compactness, substitute declarations where appropriate */
+struct entry {
+	uint32_t id, param3, param4;
+	double param1, param2;
+};
+
+bool match(const struct entry * a, const struct entry * b) {
+	return a->param3 == b->param3 && a->param4 == b->param4;
+}
+
+double score(const struct entry * a, const struct entry * b) {
+	return fabs(a->param1 - b->param1) + fabs(a->param2 - b->param2);
+}
+
+fstat(fda, &st);
+size_t sizea = st.st_size / sizeof(struct entry);
+struct entry * paramsa = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fda, 0);
+/* same for paramsb */
+
+for (size_t a = 0; a < sizea; ++k) {
+		double minscore = INFINITY;
+		for (size_t b = 0; b < sizeb; ++n) {
+				if (!match(&paramsa[a], &paramsb[b])) continue;
+				double scr = score(&paramsa[a], &paramsb[b]);
+				if (scr < minscore) {
+						minscore = scr;
+				}
+		}
+		printf("%g\n", minscore);
+}
+[% END %]
+
+It took 2 minutes 9 seconds to obtain all the information I needed. Now that I knew the distribution of minimal const function values, it was easy to choose the threshold - and, with a different C program, print out matching <code>id</code>s to import back in the database.
