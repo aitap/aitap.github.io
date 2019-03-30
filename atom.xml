@@ -3,18 +3,113 @@
 	<title>Perhaps I should start a blog</title>
 	<link href="https://aitap.github.io/" />
 	<id>https://aitap.github.io/atom.xml</id> <!-- it's an IRI all right -->
-	<updated>2018-12-18T00:00:00Z</updated>
+	<updated>2019-03-30T00:00:00Z</updated>
 	<author>
 		<name>Ivan Krylov</name>
 		<email>krylov.r00t@gmail.com</email>
 	</author>
 <entry>
-			<title>Not Invented Here</title>
-			<link href="https://aitap.github.io/2018/12/19/nih.html" />
-			<id>https://aitap.github.io/2018/12/19/nih.html</id> <!-- unique enough -->
-			<updated>2018-12-19T00:00:00Z</updated>
+			<title>Some things should not be expressed in SQL</title>
+			<link href="https://aitap.github.io/2019/03/30/sql.html" />
+			<id>https://aitap.github.io/2019/03/30/sql.html</id> <!-- unique enough -->
+			<updated>2019-03-30T00:00:00Z</updated>
 			<content type="xhtml">
-				<div xmlns="http://www.w3.org/1999/xhtml"><p>My Not Invented Here syndrome will some day be the end of me.</p>
+				<div xmlns="http://www.w3.org/1999/xhtml"><p>I have a confession to make.</p>
+
+<p>I have been heavily abusing <span class="caps">SQL.</span> It had started a few years ago when I wanted to make a website and some guy told me to try soft stuff like <span class="caps">SQL</span>ite. It was easy to get hold of, the promised effects happened very easily (want full text search on a small website? <code>CREATE VIRTUAL TABLE search USING fts4(fulltext, title, tokenize=unicode61)'</code> and you are done!), and there seemed to be no withdrawal.</p>
+
+<p>Since them I have been using <span class="caps">SQL</span>ite in every few of my projects (despite telling myself that I can get by without it), sometimes even as a dumb key-value store with no indexes (tried <span class="caps">BDB, </span>but the comedowns caused by incorrect linking between different compilers made my application vomit, so I stopped).</p>
+
+<p>This brings us to my latest project. I have two text files, one 1.5M gzipped, another 25M xz-compressed, containing fundamental physical data obtained by different methods and compiled by different people. The datasets partially intersect - this is a fact - but it is impossible to find exact relations between entries with 100% because their string descriptions were produced using two different theories and encoded using different (and not precisely specified) encoding rules.</p>
+
+<p>Instead, I have to resort to imprecice matching by parameter values: if the values (of type <span class="caps">REAL, </span>of course) are "close enough", I should consider them the same. How close is close enough? Let's find out: for each line from one dataset, let's find out the mininal difference to any of the lines from the other dataset:</p>
+
+
+
+<pre>
+<span style="color:#000000; font-weight:bold">create table</span> minimal_cost <span style="color:#000000; font-weight:bold">as</span>
+<span style="color:#000000; font-weight:bold">select</span>
+	a.<span style="color:#000000; font-weight:bold">id as</span> a_id<span style="color:#000000">,</span> b.<span style="color:#000000; font-weight:bold">id as</span> b_id<span style="color:#000000">,</span>
+	a.param1 <span style="color:#000000; font-weight:bold">as</span> a_param1<span style="color:#000000">,</span> b.param1 <span style="color:#000000; font-weight:bold">as</span> b_param1
+	a.param2 <span style="color:#000000; font-weight:bold">as</span> a_param2<span style="color:#000000">,</span> b.param2 <span style="color:#000000; font-weight:bold">as</span> b_param2
+<span style="color:#000000; font-weight:bold">from</span> physparams a<span style="color:#000000">,</span> physparams b
+<span style="color:#000000; font-weight:bold">where</span>
+	a.src_id <span style="color:#000000">=</span> <span style="color:#b07e00">2</span>
+	<span style="color:#000000; font-weight:bold">and</span> b.src_id <span style="color:#000000">=</span> <span style="color:#b07e00">1</span>
+	<span style="color:#000000; font-weight:bold">and</span> <span style="color:#000000">(</span>
+		<span style="color:#838183; font-style:italic">-- thankfully, param1 and param2 have similar scales, or I'd have to invent a complex cost function</span>
+		<span style="color:#000000; font-weight:bold">select min</span><span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">abs</span><span style="color:#000000">(</span>bb.param1<span style="color:#000000">-</span>a.param1<span style="color:#000000">) +</span> <span style="color:#000000; font-weight:bold">abs</span><span style="color:#000000">(</span>bb.param2<span style="color:#000000">-</span>a.param2<span style="color:#000000">))</span>
+		<span style="color:#000000; font-weight:bold">from</span> physparams bb
+		<span style="color:#000000; font-weight:bold">where</span>
+			bb.src_id <span style="color:#000000">=</span> <span style="color:#b07e00">1</span>
+			<span style="color:#000000; font-weight:bold">and</span> bb.param3 <span style="color:#000000">=</span> a.param4
+			<span style="color:#000000; font-weight:bold">and</span> bb.param4 <span style="color:#000000">=</span> a.param4 <span style="color:#838183; font-style:italic">-- these are INTEGER</span>
+	<span style="color:#000000">) = (</span><span style="color:#000000; font-weight:bold">abs</span><span style="color:#000000">(</span>b.param1<span style="color:#000000">-</span>a.param1<span style="color:#000000">) +</span> <span style="color:#000000; font-weight:bold">abs</span><span style="color:#000000">(</span>b.param2<span style="color:#000000">-</span>a.param2<span style="color:#000000">))</span>
+<span style="color:#000000">;</span>
+</pre>
+
+
+
+<p>This is about the opposite of relational databases do well: instead of using an established relation between tuples helped by indices, the database engine has to find one out, and there is no possible index one could use to speed it up. Well, apart from computing the whole <img src="data:image/gif;base64,R0lGODdhOAATAPMAAP///9XV1crKyr+/v7W1tampqZKSkm5ubmFhYVRUVEZGRgAAAAAAAAAAAAAAAAAAACwAAAAAOAATAAAE0RDISasNy+o9V+Dghn1hOZaAcCzsIlQnanohdgzSgGTdK6MC3iaIoyAUxdivRtMIEAfLQIGQBJcy1+ZYrLAkWrAr+MV8O+MW5SqlaqZVgDBo2L0WBe18Udd7NVyASGAdBAgIPjskQguGiIQUQpGSE3AdXkVEl5FdlJQSgRWhchQxMWwSp55vCgk+OTuRa3sdA2yoC7aMGwtUOAMrr2CvYXLEeT7FeGGoUissB8JWu5upZ6QTZj1YME3cIt7fxuJDn9xK5NYk6QDo4u7pGOxy6xQRADsAAAAAAAAAAAA=" /> array of distances, which would have around <img src="data:image/gif;base64,R0lGODdhOAAQAPIAAP///9XV1crKyr+/v6mpqWFhYQAAAAAAACwAAAAAOAAQAAADnQi63P7wDcOCMSHqzdctiyUIWGeeDKUYgkKexoB2KlDb1VU2ha5LN4Dlkkl5jAoRgFR03QhBmwEUYi13q6PW1nKmmpZm42b1bsnb7CMcQSPVuHMXPp4/3Ola+ZW0kqgNbG1vdDUiTDkXUA98HnhxWh8XfVh3d3ZShEFRKI2EEI+QM0KVaaApc540LYgrehw3Sq0nQ5WTdA6ShjpiHQkAOwAAAAAAAAAAAA==" /> entries for the two datasets.</p>
+
+<p>I had abused <span class="caps">SQL</span>ite's ability to <code>select id, min(whatever)</code> and have the id of the row that had <strong>the</strong> minimal value of <code>whatever</code> and finished the query overnight on a small subset of the data. For the whole dataset, I spent a whole day looking at PostgreSQL eating one <span class="caps">CPU </span>core.</p>
+
+<p>After a while, it dawned on me that I was acting under the <span class="caps">SQL </span>influence and it was going to harm me if I didn't stop right now. So I killed the query, blew the dust off good ol' Perl and dumped everything I wanted to compare into a binary file:</p>
+
+
+
+<pre>
+<span style="color:#000000; font-weight:bold">my</span> <span style="color:#0057ae">$get</span> <span style="color:#000000">=</span> <span style="color:#0057ae">$db</span><span style="color:#000000">-&gt;</span><span style="color:#010181">prepare</span><span style="color:#000000">(</span><span style="color:#bf0303">'select id, param1, param2, param3, param4 from physparams where src_id = ?'</span><span style="color:#000000">);</span>
+<span style="color:#0057ae">$get</span><span style="color:#000000">-&gt;</span><span style="color:#010181">bind_columns</span><span style="color:#000000">(</span>\<span style="color:#000000; font-weight:bold">my</span><span style="color:#000000">(</span><span style="color:#0057ae">$id</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param1 $param2</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param3</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param4</span><span style="color:#000000">));</span>
+
+<span style="color:#000000; font-weight:bold">open my</span> <span style="color:#0057ae">$fh</span><span style="color:#000000">,</span> <span style="color:#bf0303">&quot;&gt;:raw&quot;</span><span style="color:#000000">,</span> <span style="color:#bf0303">&quot;db1.bin&quot;</span><span style="color:#000000">;</span>
+<span style="color:#0057ae">$get</span><span style="color:#000000">-&gt;</span><span style="color:#010181">execute</span><span style="color:#000000">(</span><span style="color:#b07e00">1</span><span style="color:#000000">);</span>
+<span style="color:#000000; font-weight:bold">print</span> <span style="color:#0057ae">$fh</span> <span style="color:#000000; font-weight:bold">pack</span> <span style="color:#bf0303">&quot;LLLdd&quot;</span><span style="color:#000000">,</span> <span style="color:#0057ae">$id</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param3</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param4</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param1</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param2</span>
+	<span style="color:#000000; font-weight:bold">while</span> <span style="color:#0057ae">$get</span><span style="color:#000000">-&gt;</span><span style="color:#010181">fetch</span><span style="color:#000000">;</span>
+</pre>
+
+
+
+<p>then powered up C and ran the <img src="data:image/gif;base64,R0lGODdhOAATAPMAAP///9XV1crKyr+/v7W1tampqZKSkm5ubmFhYVRUVEZGRgAAAAAAAAAAAAAAAAAAACwAAAAAOAATAAAE0RDISasNy+o9V+Dghn1hOZaAcCzsIlQnanohdgzSgGTdK6MC3iaIoyAUxdivRtMIEAfLQIGQBJcy1+ZYrLAkWrAr+MV8O+MW5SqlaqZVgDBo2L0WBe18Udd7NVyASGAdBAgIPjskQguGiIQUQpGSE3AdXkVEl5FdlJQSgRWhchQxMWwSp55vCgk+OTuRa3sdA2yoC7aMGwtUOAMrr2CvYXLEeT7FeGGoUissB8JWu5upZ6QTZj1YME3cIt7fxuJDn9xK5NYk6QDo4u7pGOxy6xQRADsAAAAAAAAAAAA=" /> operation on raw data:</p>
+
+
+
+<pre>
+<span style="color:#010181">/* auxillary code omitted for the sake of compactness, substitute declarations where appropriate */</span>
+struct entry <span style="color:#000000">{</span>
+	uint32_t id<span style="color:#000000">,</span> param3<span style="color:#000000">,</span> param4<span style="color:#000000">;</span>
+	double param1<span style="color:#000000">,</span> param2<span style="color:#000000">;</span>
+<span style="color:#000000">};</span>
+
+bool match<span style="color:#000000">(</span>const struct entry <span style="color:#000000">*</span> a<span style="color:#000000">,</span> const struct entry <span style="color:#000000">*</span> b<span style="color:#000000">) {</span>
+	<span style="color:#000000; font-weight:bold">return</span> a<span style="color:#000000">-&gt;</span><span style="color:#010181">param3</span> <span style="color:#000000">==</span> b<span style="color:#000000">-&gt;</span><span style="color:#010181">param3</span> <span style="color:#000000">&amp;&amp;</span> a<span style="color:#000000">-&gt;</span><span style="color:#010181">param4</span> <span style="color:#000000">==</span> b<span style="color:#000000">-&gt;</span><span style="color:#010181">param4</span><span style="color:#000000">;</span>
+<span style="color:#000000">}</span>
+
+double score<span style="color:#000000">(</span>const struct entry <span style="color:#000000">*</span> a<span style="color:#000000">,</span> const struct entry <span style="color:#000000">*</span> b<span style="color:#000000">) {</span>
+	<span style="color:#000000; font-weight:bold">return</span> fabs<span style="color:#000000">(</span>a<span style="color:#000000">-&gt;</span><span style="color:#010181">param1</span> <span style="color:#000000">-</span> b<span style="color:#000000">-&gt;</span><span style="color:#010181">param1</span><span style="color:#000000">) +</span> fabs<span style="color:#000000">(</span>a<span style="color:#000000">-&gt;</span><span style="color:#010181">param2</span> <span style="color:#000000">-</span> b<span style="color:#000000">-&gt;</span><span style="color:#010181">param2</span><span style="color:#000000">);</span>
+<span style="color:#000000">}</span>
+
+fstat<span style="color:#000000">(</span>fda<span style="color:#000000">, &amp;</span>st<span style="color:#000000">);</span>
+size_t sizea <span style="color:#000000">=</span> st<span style="color:#000000">.</span>st_size <span style="color:#000000">/</span> sizeof<span style="color:#000000">(</span>struct entry<span style="color:#000000">);</span>
+struct entry <span style="color:#000000">*</span> paramsa <span style="color:#000000">=</span> mmap<span style="color:#000000">(</span>NULL<span style="color:#000000">,</span> st<span style="color:#000000">.</span>st_size<span style="color:#000000">,</span> PROT_READ<span style="color:#000000">,</span> MAP_PRIVATE <span style="color:#000000">|</span> MAP_POPULATE<span style="color:#000000">,</span> fda<span style="color:#000000">,</span> <span style="color:#b07e00">0</span><span style="color:#000000">);</span>
+<span style="color:#010181">/* same for paramsb */</span>
+
+<span style="color:#000000; font-weight:bold">for</span> <span style="color:#000000">(</span>size_t a <span style="color:#000000">=</span> <span style="color:#b07e00">0</span><span style="color:#000000">;</span> a <span style="color:#000000">&lt;</span> sizea<span style="color:#000000">; ++</span>k<span style="color:#000000">) {</span>
+		double minscore <span style="color:#000000">=</span> INFINITY<span style="color:#000000">;</span>
+		<span style="color:#000000; font-weight:bold">for</span> <span style="color:#000000">(</span>size_t b <span style="color:#000000">=</span> <span style="color:#b07e00">0</span><span style="color:#000000">;</span> b <span style="color:#000000">&lt;</span> sizeb<span style="color:#000000">; ++</span>n<span style="color:#000000">) {</span>
+				<span style="color:#000000; font-weight:bold">if</span> <span style="color:#000000">(!</span>match<span style="color:#000000">(&amp;</span>paramsa<span style="color:#000000">[</span>a<span style="color:#000000">], &amp;</span>paramsb<span style="color:#000000">[</span>b<span style="color:#000000">]))</span> <span style="color:#000000; font-weight:bold">continue</span><span style="color:#000000">;</span>
+				double scr <span style="color:#000000">=</span> score<span style="color:#000000">(&amp;</span>paramsa<span style="color:#000000">[</span>a<span style="color:#000000">], &amp;</span>paramsb<span style="color:#000000">[</span>b<span style="color:#000000">]);</span>
+				<span style="color:#000000; font-weight:bold">if</span> <span style="color:#000000">(</span>scr <span style="color:#000000">&lt;</span> minscore<span style="color:#000000">) {</span>
+						minscore <span style="color:#000000">=</span> scr<span style="color:#000000">;</span>
+				<span style="color:#000000">}</span>
+		<span style="color:#000000">}</span>
+		<span style="color:#000000; font-weight:bold">printf</span><span style="color:#000000">(</span><span style="color:#bf0303">&quot;</span><span style="color:#0057ae">%g</span><span style="color:#bf0303"></span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&quot;</span><span style="color:#000000">,</span> minscore<span style="color:#000000">);</span>
+<span style="color:#000000">}</span>
+</pre>
+
+
+
+<p>It took 2 minutes 9 seconds to obtain all the information I needed. Now that I knew the distribution of minimal const function values, it was easy to choose the threshold - and, with a different C program, print out matching <code>id</code>s to import back in the database.</p>
 				</div>
 			</content>
 		</entry>
