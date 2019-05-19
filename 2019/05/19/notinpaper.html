@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1"> <!-- stupid mobile browsers -->
+		<title>You don't read about this in the articles</title>
+		<style>
+			.center {
+				text-align: center;
+				display: block;
+				margin-left: auto;
+				margin-right: auto;
+			}
+		</style>
+		<link href="/atom.xml" type="application/atom+xml" rel="alternate" title="Atom feed">
+	</head>
+	<body>
+		<h1>You don't read about this in the articles</h1>
+		<div class="content">
+			<p>There is a side to experimental science that is not mentioned in research articles, being an implementation detail unrelated to the result or its reproducibility. And yet, sometimes I notice myself being consumed by it, instead of doing stuff I can later publish.</p>
+
+<p>My first "real" programming assignment (as in: my scientific advisor explicitly asked me to write some code, as opposed to building a bunch of regression models in a way that happens to be easily scriptable) was to control a signal generator. Like a modern piece of lab equipment, it only had an ON/OFF button, a RESET button, a USB interface and a Bluetooth chip, the latter two exposing a virtual serial port to pass commands through. The idea was to have a <em>programmatic</em> way of turning it on and off and setting pulse delays and widths; the vendor had shipped a GUI application, but it threw cryptic number format-related errors and had no API anyway. I was given the generator, an oscilloscope to monitor what it was doing, and a single requirement: "make is easily callable from LabVIEW"<sup><a href="#fn1">1</a></sup>. Out of all languages callable from LabVIEW<sup><a href="#fn2">2</a></sup> I chose C, because MATLAB and Scilab are unrelated to serial port programming, C# seemed too Microsoft-centered (while I was a free software aficionado <em>and</em> wanted my code to be cross-platform) and K&amp;R is slightly shorter than 300 pages while Prata's C++ Primer Plus is more than 1000. My decision could have been a bit biased since I already had a copy of K&amp;R I couldn't have remembered how I got.</p>
+
+<p>In about three months, intermixed with exams and holidays, I read the important parts of K&amp;R, designed a relatively sane public interface and an abominable implementation riddled with unnecessary macros and memory errors. After I thought that I fixed all the bugs, I found out about Valgrind, which found more of them that I thought was possible. In the process I found out that the device speaks <a href="https://en.wikipedia.org/wiki/Standard_Commands_for_Programmable_Instruments">SCPI</a>, but with a bunch of quirks: while reading a long scientific format number like <code>1.000000000e-5</code> it might get bored and forget about <code>e-5</code>; the replies are terminated by an additional <code>NUL</code> if you use USB (but only <code>\r\n</code> if you use Bluetooth); the device stops communicating with you if you send it a particular command that should be printing status information instead, an empty command (so, just <code>\r\n</code>), or if you write the command and the terminating <code>\r\n</code> in two different <code>write()</code> calls instead of one. Oh, and the device didn't work with our lab equipment anyway because we overlooked its much higher impedance requirements.</p>
+
+<p>And when I wrote a GUI for the library, something in the graphical toolkit called <code>setlocale(LC_ALL, &quot;&quot;)</code> and the library broke down because standard C string formatting functions are locale-sensitive and now all my numbers had a decimal comma instead of decimal point.</p>
+
+<p id="fn1"><sup>1</sup> Spoiler: the code I'd written has been never used with LabVIEW.</p>
+
+<p id="fn2"><sup>2</sup> C and C-compatible by calling convention; C#; MATLAB, Scilab... anything else?</p>
+		</div>
+		<hr>
+		Unless otherwise specified, contents of this blog are covered by <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> license (or a later version).
+	</body>
+</html>

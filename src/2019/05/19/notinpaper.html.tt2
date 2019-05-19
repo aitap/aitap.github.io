@@ -1,0 +1,16 @@
+[% PROCESS macros.tt2 %]
+[% global.title = "You don't read about this in the articles" %]
+
+There is a side to experimental science that is not mentioned in research articles, being an implementation detail unrelated to the result or its reproducibility. And yet, sometimes I notice myself being consumed by it, instead of doing stuff I can later publish.
+
+My first "real" programming assignment (as in: my scientific advisor explicitly asked me to write some code, as opposed to building a bunch of regression models in a way that happens to be easily scriptable) was to control a signal generator. Like a modern piece of lab equipment, it only had an ON/OFF button, a RESET button, a USB interface and a Bluetooth chip, the latter two exposing a virtual serial port to pass commands through. The idea was to have a _programmatic_ way of turning it on and off and setting pulse delays and widths; the vendor had shipped a GUI application, but it threw cryptic number format-related errors and had no API anyway. I was given the generator, an oscilloscope to monitor what it was doing, and a single requirement: "make is easily callable from LabVIEW"[1]. Out of all languages callable from LabVIEW[2] I chose C, because MATLAB and Scilab are unrelated to serial port programming, C# seemed too Microsoft-centered (while I was a free software aficionado _and_ wanted my code to be cross-platform) and K&R is slightly shorter than 300 pages while Prata's C++ Primer Plus is more than 1000. My decision could have been a bit biased since I already had a copy of K&R I couldn't have remembered how I got.
+
+In about three months, intermixed with exams and holidays, I read the important parts of K&R, designed a relatively sane public interface and an abominable implementation riddled with unnecessary macros and memory errors. After I thought that I fixed all the bugs, I found out about Valgrind, which found more of them that I thought was possible. In the process I found out that the device speaks "SCPI":https://en.wikipedia.org/wiki/Standard_Commands_for_Programmable_Instruments, but with a bunch of quirks: while reading a long scientific format number like @1.000000000e-5@ it might get bored and forget about @e-5@; the replies are terminated by an additional @NUL@ if you use USB (but only @\r\n@ if you use Bluetooth); the device stops communicating with you if you send it a particular command that should be printing status information instead, an empty command (so, just @\r\n@), or if you write the command and the terminating @\r\n@ in two different @write()@ calls instead of one. Oh, and the device didn't work with our lab equipment anyway because we overlooked its much higher impedance requirements.
+
+And when I wrote a GUI for the library, something in the graphical toolkit called @setlocale(LC_ALL, "")@ and the library broke down because standard C string formatting functions are locale-sensitive and now all my numbers had a decimal comma instead of decimal point.
+
+<!-- TODO: the camera, the fluorometer, the photometer -->
+
+fn1. Spoiler: the code I'd written has been never used with LabVIEW.
+
+fn2. C and C-compatible by calling convention; C#; MATLAB, Scilab... anything else?
