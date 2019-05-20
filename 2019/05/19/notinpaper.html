@@ -23,11 +23,17 @@
 
 <p>In about three months, intermixed with exams and holidays, I read the important parts of K&amp;R, designed a relatively sane public interface and an abominable implementation riddled with unnecessary macros and memory errors. After I thought that I fixed all the bugs, I found out about Valgrind, which found more of them that I thought was possible. In the process I found out that the device speaks <a href="https://en.wikipedia.org/wiki/Standard_Commands_for_Programmable_Instruments">SCPI</a>, but with a bunch of quirks: while reading a long scientific format number like <code>1.000000000e-5</code> it might get bored and forget about <code>e-5</code>; the replies are terminated by an additional <code>NUL</code> if you use USB (but only <code>\r\n</code> if you use Bluetooth); the device stops communicating with you if you send it a particular command that should be printing status information instead, an empty command (so, just <code>\r\n</code>), or if you write the command and the terminating <code>\r\n</code> in two different <code>write()</code> calls instead of one. Oh, and the device didn't work with our lab equipment anyway because we overlooked its much higher impedance requirements.</p>
 
-<p>And when I wrote a GUI for the library, something in the graphical toolkit called <code>setlocale(LC_ALL, &quot;&quot;)</code> and the library broke down because standard C string formatting functions are locale-sensitive and now all my numbers had a decimal comma instead of decimal point.</p>
+<p>And when I wrote a GUI for the library, something in the graphical toolkit called <code>setlocale(LC_ALL, &quot;&quot;)</code> and the library broke down because standard C string formatting functions are locale-sensitive, so they put a decimal comma instead of a decimal point, and expected it back, too. Now I had a to put in a kludge (<code>setlocale(LC_ALL, &quot;C&quot;)</code> and restore the settings after each string formatting call), then redesign the part of the library that was responsible for string handling. I'm sure there is a moral in it somewhere.</p>
+
+<p>Another piece of equipment vitally important to our research is the camera. It's an old model (neither the camera, nor the chip it's based on, nor the frame grabber are produced or supported anymore), and it shows<sup><a href="#fn3">3</a></sup>. Sometimes it would produce a wavy pattern all over the picture it is capturing. Sometimes it would not. The pattern has a very low amplitude, so it's invisible in the 12-bit image, but when you have already binned the picture, got a 1D spectrum and instead of some low-intensity signal there is a saw staring in your face, it's infuriating. Especially since we bin the images immediately after capture and throw the original away: raw 12-bit images are too heavy to store in large amounts. I rolled the sleeves and wrote a program that runs a 2D Fourier transform over an empty region of the image, locates the peak corresponding to the wavy pattern and exterminates it in the whole image with extreme prejudice by setting its amplitude to median.</p>
+
+<!-- TODO: the fluorometer, the photometer -->
 
 <p id="fn1"><sup>1</sup> Spoiler: the code I'd written has been never used with LabVIEW.</p>
 
 <p id="fn2"><sup>2</sup> C and C-compatible by calling convention; C#; MATLAB, Scilab... anything else?</p>
+
+<p id="fn3"><sup>3</sup> There is a Windows 2003-era computer in the lab, sitting there specifically for the task of operating the camera.</p>
 		</div>
 		<hr>
 		Unless otherwise specified, contents of this blog are covered by <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> license (or a later version).
