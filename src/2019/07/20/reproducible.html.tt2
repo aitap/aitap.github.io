@@ -1,0 +1,16 @@
+[% PROCESS macros.tt2 %]
+[% global.title = "R is for Reproducible" %]
+
+<!--
+
+Outline:
+
+Vignette fail
+
+citeproc fail
+
+what RCurl consists of
+
+more?
+
+-->
