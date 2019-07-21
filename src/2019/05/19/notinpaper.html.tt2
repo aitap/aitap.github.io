@@ -1,6 +1,10 @@
 [% PROCESS macros.tt2 %]
 [% global.title = "You don't read about this in the articles" %]
 
+[%~ PERL ~%]
+        system(qw(r src/2019/05/19/plot.r))
+[% END %]
+
 There is a side to experimental science that is not mentioned in research articles, being an implementation detail unrelated to the result or its reproducibility. And yet, sometimes I notice myself being consumed by it, instead of doing stuff I can later publish.
 
 My first "real" programming assignment (as in: my scientific advisor explicitly asked me to write some code, as opposed to building a bunch of regression models in a way that happens to be easily scriptable) was to control a signal generator. Like a modern piece of lab equipment, it only had an ON/OFF button, a RESET button, a USB interface and a Bluetooth chip, the latter two exposing a virtual serial port to pass commands through. The idea was to have a _programmatic_ way of turning it on and off and setting pulse delays and widths; the vendor had shipped a GUI application, but it threw cryptic number format-related errors and had no API anyway. I was given the generator, an oscilloscope to monitor what it was doing, and a single requirement: "make is easily callable from LabVIEW"[1]. Out of all languages callable from LabVIEW[2] I chose C, because MATLAB and Scilab are unrelated to serial port programming, C# seemed too Microsoft-centered (while I was a free software aficionado _and_ wanted my code to be cross-platform) and K&R is slightly shorter than 300 pages while Prata's C++ Primer Plus is more than 1000. My decision could have been a bit biased since I already had a copy of K&R I couldn't have remembered how I got.
@@ -9,20 +13,28 @@ In about three months, intermixed with exams and holidays, I read the important 
 
 And when I wrote a GUI for the library, something in the graphical toolkit called @setlocale(LC_ALL, "")@ and the library broke down because standard C string formatting functions are locale-sensitive, so in certain locales they put in a decimal comma instead of a decimal point, and expected it back, too. Now I had a to devise a kludge (wrap each string formatting call in @char * locale = setlocale(LC_ALL, "C"); /* ... */; setlocale(LC_ALL, locale);@), then redesign the part of the library that was responsible for string handling to avoid standard C string formatting functions altogether. It was then when I understood the problem with vendor's software: it had had the same bug all along. I'm sure there is a moral in it somewhere.
 
-Another piece of equipment vitally important to our research is the camera. It's an old model (neither the camera, nor the chip it's based on, nor the frame grabber are produced or supported anymore), and it shows[3]. Sometimes it would produce a wavy pattern all over the picture it is capturing. Sometimes it would not. The pattern has a very low amplitude, so it's invisible in the 12-bit image, but when you have already binned the picture, got a 1D spectrum and instead of some low-intensity signal there is a saw staring in your face, it's infuriating. Especially since we bin the images immediately after capture and throw the original away: raw 12-bit images are too heavy to store in large amounts. I rolled the sleeves and wrote a program that runs a 2D Fourier transform over an empty region of the image, locates the peak corresponding to the wavy pattern and exterminates it in the whole image with extreme prejudice by setting its amplitude to median. This is nothing compared to what my colleague had to endure while preparing his PhD thesis, armed only with this camera, some C & LabVIEW skills and a lot of determination. Just for example, one thing that he had to do before his model agreed with experimental data was adding a really wide low-intensity triangular component to the instrumental function which _should_ have been just a Lorentz peak[4].
-
-<!-- TODO: the fluorometer, the photometer -->
+Another piece of equipment vitally important to our research is the camera. It's an old model (neither the camera, nor the chip it's based on, nor the frame grabber are produced or supported anymore), and it shows[3]. Sometimes it would produce a wavy pattern all over the picture it is capturing. Sometimes it would not. The pattern has a very low amplitude, so it's invisible in the 12-bit image, but when you have already binned the picture, got a 1D spectrum and instead of some low-intensity signal there is a saw staring in your face, it's infuriating. Especially since we bin the images immediately after capture and throw the original away: raw 12-bit images are too heavy to store in large amounts. I rolled the sleeves and wrote a program that runs a 2D Fourier transform over an empty region of the image, locates the peak corresponding to the wavy pattern and exterminates it in the whole image with extreme prejudice by setting its amplitude to median. This is nothing compared to what my colleague had to endure while preparing his PhD thesis, armed only with this camera, some C & LabVIEW skills and a lot of determination. Just for example, one thing that he had to do before his model agreed with experimental data was adding a really wide low-intensity component to the instrumental function which _should_ have been just a Lorentz peak[4].
 
 One piece of lab equipment I'm directly involved with is the fluorometer. This one was new back when I went to elementary school. Over time it accumulates quirks; once the amount of quirks passes a certain threshold, we send it for repairs. Sometimes quirks are noticed too late and have to be accounted for post-factum. Other times, the quirks have nothing to do with the ways data is botched, but the samples are unique (getting some more may mean conducting an expedition); hence, every byte is sacred and must be taked into account somehow. Here is the list of corrections I have to apply on a single dataset so far, before doing anything scientifically meaningful to it:
 
 * Change the wavelengths using lookup table produced when the fluorometer was recalibrated
 * Stitch together parts of spectra produced when the fluorometer stopped mid-measurement and had to be reset
-* Divide by excitation signal (measured separately)
-** Note that the reference signal _also_ had its wavelentghs botched. It took us a while to realise that.
-* Find out a sane range of wavelengths that most of the samples have measured: some samples were measured until 700 nm, others stop at 650. Most samples start at 230 nm, but there are a few starting at 200 but stopping before 400.
-** Yes, this involves throwing samples out.
+* Divide by excitation signal (measured separately). Note that the reference signal _also_ had its wavelentghs botched. It took us quite a while to realise that.
+* Find out the most common grid of wavelengths that all samples are measured at. Throw out the samples that don't fit.
 
-Some time ago the filter that cuts off [% TeX('2\lambda') %] from the diffraction grating of the excitation monochromator stopped working correctly, so I'm quite looking forward to the kind of mathematical modeling that would let me separate *that* from the rest of fluorescence signal. So far it looks impossible, but if we write that in an article, people will just laugh at us and reject the paper. It's too easy to blame one's tools, and no-one likes whining. I'll have to improvise.
+Some time ago the filter that cuts off [% TeX('2\lambda') %] from the diffraction grating of the excitation monochromator stopped working correctly (also, the fluorometer now always stops the measurement on the threshold where the filter is supposed to be engaged), so I'm quite looking forward to the kind of mathematical modeling that would let me separate *that* from the rest of fluorescence signal. So far it looks impossible, but if we write that in an article, people will just laugh at us and reject the paper. It's too easy to blame one's tools, and no-one likes whining. I'll have to improvise.
+
+One of the important steps in the analysis of fluorescense spectrum is inner filter effect correction. For that, one needs an absorbance spectrum of the sample. So we found a photometer and took the measurements. Then we realised that, on export, the photometer software would only provide us three digits after the decimal point. So I sat down and reverse-engineered the binary format the fluorometer software actually stores data in. This is what the spectrum looked like:
+
+!(center)abs.svg!
+
+Of course, the photometer was botched, too. I have no idea why (did it also have filter problems?), but I had to sit down and write a function that would calculate finite difference approximation of absorbance derivative and filter out the sudden spikes by comparing them to moving window median ± median absolute deviation multiplied by a constant.
+
+!(center)absd.svg!
+
+Of course, this meant that the absorbance now was known up to constant summand and the fluorescence, in turn, was known up to a constant factor, but at least changes in the profile caused by self-absorption were reversed.
+
+In conclusion, a paper is just a tip of the iceberg. Under the "relevant" parts, required to reproduce a work, someone is always wrestling with their apparatus, just in order to get everything working. Don't get too distracted by it if you want to have any science done.
 
 fn1. Spoiler: the code I'd written has been never used with LabVIEW.
 
