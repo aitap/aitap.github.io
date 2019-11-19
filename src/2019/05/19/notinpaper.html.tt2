@@ -34,6 +34,8 @@ Of course, the photometer was botched, too. I have no idea why (did it also have
 
 Of course, this meant that the absorbance now was known up to constant summand and the fluorescence, in turn, was known up to a constant factor, but at least changes in the profile caused by self-absorption were reversed.
 
+<!-- TODO: the DAC story -->
+
 In conclusion, a paper is just a tip of the iceberg. Under the "relevant" parts, required to reproduce a work, someone is always wrestling with their apparatus, just in order to get everything working. Don't get too distracted by it if you want to have any science done.
 
 fn1. Spoiler: the code I'd written has been never used with LabVIEW.
