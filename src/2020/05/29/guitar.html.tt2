@@ -1,0 +1,13 @@
+[% PROCESS macros.tt2 %]
+
+[% WRAPPER code, lang => 'sh' %]
+# connect to Rakarrack handling the USB sound card via JACK
+pacmd load-module module-jack-source source_name="jack_in"
+# make sound from JACK available on default sink
+pacmd load-module module-loopback latency_msec=5   source="jack_in" sink="alsa_output.pci-0000_00_1b.0.analog-stereo"
+# mix sound from JACK and microphone to a virtual sink
+pacmd load-module module-null-sink sink_name="mic_guitar"
+pacmd load-module module-loopback latency_msec=100 source="jack_in" sink="mic_guitar"
+pacmd load-module module-loopback latency_msec=100 source="alsa_input.pci-0000_00_1b.0.analog-stereo" sink="mic_guitar"
+# (use monitor of that sink to get mixed sound)
+[% END %]
