@@ -1,0 +1,174 @@
+[% PROCESS macros.tt2 %]
+[% global.title = "The file recovery that wasn't" %]
+
+[% WRAPPER code, lang => 'Perl' %]
+#!/usr/bin/perl
+use v5.24;
+use autodie;
+use warnings;
+use experimental 'signatures';
+use Data::Dump;
+use Getopt::Long;
+use Try::Tiny;
+
+GetOptions(
+	'cluster=i' => \my @clusters,
+	'offset=i' => \my @offsets,
+	'dump:i' => \my $dump,
+) or die "Usage: $0 [--cluster <cluster>] [--offset <offset>] [--dump=[cluster to dump]]\n";
+
+die "Usage: $0 /dev/sdXY\n" unless @ARGV >= 1;
+
+open my $fat, '<:raw', $ARGV[0];
+
+sub getblock($off, $len) {
+	try { seek $fat, $off, 'SEEK_SET'; } catch { return ''; };
+	die "Short read" unless $len == read $fat, my($ret), $len;
+	$ret;
+}
+
+sub printify($str) {
+	$str =~ s/([^0-9a-zA-Z._,~^ ])/sprintf "\\x%02x", ord $1/msger;
+}
+
+my (
+	$oemid, $bytespers, $sectperc, $reserveds, $nfats, $ndents,
+	$nsec, $mediadesc, $sectpert, $nheads, $nhiddens, $large_nsec
+) = unpack "x3 A8 S< C S< C S< S< C x2 S< S< L< L<", getblock(0, 36);
+
+$nsec ||= $large_nsec;
+
+say for (
+	"BIOS Parameter Block:",
+	"OEM ID: @{[printify $oemid]}",
+	"Sector size: $bytespers bytes",
+	"Cluster size: $sectperc sectors = @{[$sectperc * $bytespers]} bytes",
+	"Reserved sectors: $reserveds (including the boot sector)",
+	"FATs: $nfats",
+	"Root directory entries: $ndents (must be 0)",
+	"Total sectors in volume: $nsec = @{[$nsec * $bytespers]} bytes",
+	"Media descriptor type (?!): $mediadesc",
+	"Geometry: $sectpert sectors/track, $nheads heads",
+	"LBA of the beginning of the partition: $nhiddens sectors",
+	""
+);
+
+my (
+	$sectperfat, $flags, $vfat, $rootdir, $fsinfo,
+	$backup, $volumeid, $label, $sysid
+) = unpack "L< S< S< L< S< S< x12 x1 x1 x1 L< A11 A8", getblock(0x24, 54);
+
+say for (
+	"Extended Boot Record",
+	"FAT size: $sectperfat sectors = @{[$sectperfat * $bytespers]} bytes",
+	"Flags: $flags",
+	"FAT version: $vfat",
+	"Root directory at cluster $rootdir",
+	"FSInfo structure at cluster $fsinfo",
+	"Backup boot sector at cluster $backup",
+	"Volume ID: $volumeid",
+	"Label: @{[printify $label]}",
+	"System identifier: @{[printify $sysid]}",
+	""
+);
+
+my $data_sector_start = $reserveds + ($nfats * $sectperfat);
+
+say "Data starts at sector $data_sector_start";
+
+sub clus_to_sec($clus) {
+	(($clus - 2) * $sectperc) + $data_sector_start;
+}
+
+my @seen;
+sub getcluster($clus) {
+	my ($ret) = ('');
+	do {
+		$seen[$clus] = 1;
+		$ret .= getblock(clus_to_sec($clus) * $bytespers, $sectperc * $bytespers);
+
+		my $newclus = unpack(
+			"L<",
+			getblock($reserveds * $bytespers + $sectperfat * $bytespers + $clus * 4, 4)
+		) & 0x0FFFFFFF;
+		return $ret if $newclus == $clus; # WTF!
+		$clus = $newclus;
+		#printf "0x%08x\n", $clus;
+	} while $clus < 0x0FFFFFF7;
+	$ret;
+}
+
+sub off_to_clus($off) {
+	($off / $bytespers - $data_sector_start) / $sectperc + 2;
+}
+
+my ($fssig, $fssig2, $last_free_clus, $first_free_clus, $fssig3) =
+	unpack "L< x480 L< L< L< x12 L<",
+	getblock($bytespers * clus_to_sec($fsinfo), 512);
+
+if ($fssig == 0x41615252) {
+	say for (
+		"FSInfo structure:",
+		"Found valid lead signature $fssig = 0x41615252",
+		"Second signature: $fssig2 (must be 0x61417272)",
+		"Last known free cluster count: $last_free_clus",
+		"Start looking for free clusters at: $first_free_clus",
+		"Trail signature: $fssig3 (must be 0xAA550000)",
+		""
+	);
+}
+
+sub read_dir($clus) {
+	my $data = getcluster($clus);
+	my $off = 0;
+	my @ret;
+	for (;;$off += 32) {
+		return @ret if $off == length $data;
+		my ($name, $attr, $hiclus, $loclus, $size) =
+			unpack "a11 C x x x2 x2 x2 S< x2 x2 S< L<",
+			substr $data, $off, 32;
+		my $byte = substr $name, 0, 1;
+		return @ret if $byte eq "\0";
+		next if $byte eq "\x{e5}";
+		next if $attr == (0x01 | 0x02 | 0x04 | 0x08);
+		substr $name, 0, 1, "\x{e5}" if $byte eq "\x{05}";
+		unshift @ret, [ $name, $attr, ($loclus | $hiclus << 2), $size ];
+	}
+}
+
+say "Root directory:";
+printf(
+	"%33s %3d %10d %10d\n",
+	printify($_->[0]), $_->[1], $_->[2], $_->[3]
+) for read_dir($rootdir);
+
+use Data::Dump 'dd';
+
+for my $o (@offsets) {
+	say "Offset $o is in cluster @{[off_to_clus($o)]}";
+}
+
+for my $c (@clusters) {
+	say "Listing cluster $c:";
+	printf(
+		"%33s %3d %10d %10d\n",
+		printify($_->[0]), $_->[1], $_->[2], $_->[3]
+	) for read_dir($c);
+}
+
+if (defined $dump) {
+	for my $c ($dump ? $dump : (0..$nsec/$sectperc)) {
+		next if $seen[$c];
+		my $file = sprintf "dump%08d.rec", $c;
+		next if -e $file;
+		say "Dumping cluster $c to $file";
+		open my $fh, '>:raw', $file;
+		print $fh getcluster($c);
+	}
+}
+[% END %]
+
+References:
+
+1. "FAT in OSDev Wiki":https://wiki.osdev.org/FAT
+2. "Paul's 8051 Code Library: Understanding the FAT32 filesystem":https://www.pjrc.com/tech/8051/ide/fat32.html
