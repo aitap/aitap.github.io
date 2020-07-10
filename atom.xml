@@ -3,11 +3,85 @@
 	<title>Perhaps I should start a blog</title>
 	<link href="https://aitap.github.io/" />
 	<id>https://aitap.github.io/atom.xml</id> <!-- it's an IRI all right -->
-	<updated>2020-07-05T00:00:00Z</updated>
+	<updated>2020-07-10T00:00:00Z</updated>
 	<author>
 		<name>Ivan Krylov</name>
 		<email>krylov.r00t@gmail.com</email>
 	</author>
+<entry>
+			<title>The CRAN ecosystem worries</title>
+			<link href="https://aitap.github.io/2020/07/10/cran.html" />
+			<id>https://aitap.github.io/2020/07/10/cran.html</id> <!-- unique enough -->
+			<updated>2020-07-10T00:00:00Z</updated>
+			<content type="xhtml">
+				<div xmlns="http://www.w3.org/1999/xhtml"><p>I stumbled upon a very <a href="https://sambleckley.com/writing/npm.html">interesting article</a> while reading <span class="caps">LWN.</span> It raises the topics of dependency problems in package repository ecosystems with <span class="caps">NPM </span>as an example. (The <a href="https://sambleckley.com/writing/crates.html">follow-up</a> article briefly discusses <a href="https://crates.io/">Rust package registry</a> and reaches very different conclusions.)</p>
+
+<p>Unlike <span class="caps">NPM </span>with its 50G <span class="caps">JSON </span>metadata, R can get away with downloading the entire list of packages from <span class="caps">CRAN </span>and putting it into memory. <a href="https://cran.r-project.org/web/packages/index.html"><span class="caps">CRAN</span></a> says there are 16027 available packages; the actual choice may be less because of R version requirements, OS and 32-bit/64-bit subarchitecture incompatibility. Some packages are part of R, while others are heavily recommended (to the point of <code>./configure</code> refusing to continue unless a parameter is supplied or the packages are downloaded). We will not count those packages as dependencies.</p>
+
+<p>Since we can get away with it, we are going to put all dependency information into memory. <span class="caps">NPM </span>developers may consider <span class="caps">CRAN </span>to be <a href="https://devblogs.microsoft.com/oldnewthing/20180326-00/?p=98335">cute</a>. We will consider two dependency graphs:</p>
+
+
+<ol>
+<li>By default, <code>install.packages</code> only installs dependencies strictry required    to make the package work.</li>
+<li>Optionally, a package may suggest another package, but when it decides to use the suggested package, it should perform a dependency check and provide a workaround in case the suggested package turns out to be missing.</li>
+</ol>
+
+<p>When installing binary packages (which is done on Windows and macOS when using official builds of R), the set of packages to install is even smaller (<code>LinkingTo</code>, which is used for packages containing headers and test dependencies, is omitted in this case). We are going to ignore this case.</p>
+
+<p>There are no cycles in the dependency graph, because the dependency resolution algorithm would infinitely loop on them. If one does require installation of suggestions of suggestions, that's another story (an experiment performed using <code>igraph</code> suggests that most packages would depend on 10% of the whole <span class="caps">CRAN </span>right away and dependency cycles of all lengths abundant), but we are not going to do that, because that was clearly not intended to be done.</p>
+
+<p>Let's take a look at dependency tree depths. As in the original article, we define the dependency tree depth as the number of iterations that the resolving algorithm took until it didn't have to add more dependencies to the list of packages to install.</p>
+
+<p><img src="depdepths.svg" alt="" class="center" /></p>
+
+<p>So far, so good. When installing required dependencies only, most packages have 4-deep dependency trees and less. Suggested packages make it 6 for some reason, and there is also this weird peak at 8 (with its own decay!), but it's not too high.</p>
+
+<p>Are the highly dependent packages themselves depended upon?</p>
+
+<p><img src="revdepdepths.svg" alt="" class="center" /></p>
+
+<p>Mostly not, but there are a few exceptions, including:</p>
+
+<ul>
+<li><strong>viridis</strong> doesn't even contain the palette (that's in <code>viridisLite</code>, which doesn't have any required dependencies and has about 3000 reverse-dependencies), but it does depend on <code>ggplot2</code>, which is a huge dependency hog.</li>
+<li><strong>ggplot2</strong>, <strong>testthat</strong>, <strong>tibble</strong>, <strong>dplyr</strong>, <strong>tidyr</strong>, <strong>pkgload</strong>, <strong>pkgbuild</strong> are all a part of so-called <a href="https://tidyverse.org/">Tidyverse</a>, an "opinionated collection of R packages designed for data science", which have two things in common:<ol>
+<li>they like to depend on each other</li>
+<li>they all have <code>RStudio [cph]</code> in their <code>Author:</code> field in their <code>DESCRIPTION</code>.</li>
+</ol>
+</li>
+<li><strong>isoband</strong> doesn't have non-core dependencies otherwise, but uses <code>testthat</code> for testing, which takes a huge chunk of Tidyverse with it. It is also a dependency of <code>ggplot2</code>.</li>
+</ul>
+
+<p>Do any packages have many direct dependencies? Again, core and recommended packages do not count towards dependencies.</p>
+
+<p><img src="direct.svg" alt="" class="center" /></p>
+
+<p>The answer is: typically, less than 4-6, depending on whether you follow suggestions. Wait, 120 direct optional dependencies? Yes, the <a href="https://cran.r-project.org/package=mlr">mlr</a> package has 121 direct dependencies, including <code>Suggests</code> (but only 13 of them are required).</p>
+
+<p>How are total dependency counts distributed?</p>
+
+<p><img src="totaldeps.svg" alt="" class="center" /></p>
+
+<p>That's not so bad. 90% of the packages will require less than 63 dependencies if you only install required ones, or 86 if you follow their suggestions.</p>
+
+<p>Are packages with higher numbers of total dependencies themselves depended upon frequently?</p>
+
+<p><img src="totalrev.svg" alt="" class="center" /></p>
+
+<p>The plots here are more or less the same as the ones about dependency tree depth, with outliers being Tidyverse packages or their reverse dependencies. In particular, some popular packages suggest Tidyverse packages as optional dependencies, blowing up the total dependency count when those are requested.</p>
+
+<p>Another thing to note: since most packages don't have many direct dependencies, some packages with deep dependency trees have less total dependencies than other, more shallow ones:</p>
+
+<p><img src="depthndeps.svg" alt="" class="center" /></p>
+
+<p>With a small exception to the depth-dependencies plot, what we observe here probably follows from the <a href="https://cran.r-project.org/web/packages/policies.html"><span class="caps">CRAN </span>policy</a>. Packages are required to be "of publication quality" and provide "non-trivial contribution" (but what constitutes that may depend on the reviewers; e.g. see <a href="https://cran.r-project.org/package=spongebob">spongebob</a>). Packages are required to be portable (which is checked on multiple machines by an extensive set of tests), small, take little time to run their tests. Many paragraphs are devoted to listing behaviour "which might be regarded as malicious or anti-social" (which is, of course, prohibited). Packages with compiled code are also checked by Valgrind and AddressSanitizer+UBSanitizer and may be archived if any uncovered problems aren't fixed.</p>
+
+
+
+<p>This is not to say that <span class="caps">CRAN </span>is "better" than <span class="caps">NPM, </span>or R is "better" than JavaScript. Certainly not: what works well for a small group of statisticians has no reason to work well for the much larger worldwide JavaScript community. If anything, <span class="caps">CRAN </span>is <strong>not</strong> without its own problems: despite the median package requiring only 5 total dependencies, heavy tails like <a href="https://cran.r-project.org/package=smartdata">smartdata</a> with 235 required dependencies skew the average towards 20 and the later quantiles towards 60. Tidyverse itself, with 86 total required dependencies, is above 95th quantile by that parameter, but is being heavily advertised as the solution for many things, and it shows as a group of outliers on some of the plots we can make.</p>
+				</div>
+			</content>
+		</entry>
 <entry>
 			<title>Tele2 RU hijacks HTTP connections</title>
 			<link href="https://aitap.github.io/2020/07/05/tele2wtf.html" />
