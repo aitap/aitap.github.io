@@ -1,0 +1,91 @@
+[% PROCESS macros.tt2 %]
+[% global.title = 'Tracing R functions for fun and profit' %]
+
+[% WRAPPER code, lang='R' %]
+iterations <- list()
+trace(
+	parafac_3way,
+	quote(iterations[[iter+1]] <<- list(
+		A = Amat, B = Bmat, C = Cmat, SSE = ssenew
+	)),
+	at = list(c(24, 3, 7))
+)
+feemparafac(
+	Xf, const = rep('nonneg', 3), nfac = ncol(A), ctol = 1e-7,
+	nstart = 1, verbose = FALSE
+) -> wtf
+untrace(parafac_3way)
+[% END %]
+
+[% WRAPPER code, lang='R' %]
+# trace a function to make it return early
+[% END %]
+
+The documentation for @plot.acomp@ states that it should be possible to
+pass @id = TRUE@ and
+@idlabs = c(@...vector of strings...@)@ to identify points using the mouse,
+but omits the fact that it only works with a single plot (not a matrix
+of plots). There also seems to be a bug in handling @id = TRUE@:
+@plot.acomp@ unconditionally overwrites the vector of labels passed by
+user with something much less useful. I might be just misunderstanding
+it, but I failed to get it to produce useful labels with
+
+[% WRAPPER code, lang='R' %]
+# right click in the plot window to make it stop
+plot(rs.by.country[,1:3], id = TRUE, idlabs = row.names(rs.by.country))
+[% END %]
+
+Fortunately, R is a very dynamic programming language which allows us
+to do a fair bit of hacking without copying the function definition
+elsewhere, modifying it and reinstalling a rebuilt copy of the package:
+
+[% WRAPPER code, lang='R' %]
+# return the "path" to a function part as understood by trace()
+locate.function.part <- function(body, part) {
+ # look down non-trivial expressions
+ for (i in seq_along(body)) if (is.call(body[[i]])) {
+  # does this call match the part we are looking for?
+  if (length(body[[i]]) >= length(part) && all(sapply(
+   seq_along(part), function(j)
+    is.language(body[[i]][[j]]) && body[[i]][[j]] == part[[j]]
+  ))) return(i)
+  # if not, try to search deeper
+  if (!is.null(ret <- locate.function.part(body[[i]], part)))
+   return(c(i, ret)) # found? good
+ }
+ NULL # not found
+}
+
+trace(
+ what = plot.acomp,
+ tracer = quote( # this is our suture
+  if (id) { # we're first time in the tracer
+   nam <- idlabs # (1) save idlabs we'd originally passed
+   id <- FALSE # remember we've been here
+  } else { # tracer is called the second time
+   idlabs <- nam # (2) restore saved value
+  }
+ ),
+ at = list( # and this is our surgical incision
+  # (1) the part where plot.acomp is just about to overwrite idlabs
+  locate.function.part(body(plot.acomp), quote(idlabs <- 0)[1:2]),
+  # and (2) the part where it's just about to return(identify(...))
+  locate.function.part(body(plot.acomp), list(quote(identify)))
+ )
+)
+[% END %]
+
+(relying on this is, of course, bad design, but trace() is invaluable
+for debugging and quick workarounds)
+
+Having done this, we can use
+
+[% WRAPPER code, lang='R' %]
+plot.acomp(
+ acompmargin(rs.by.country, c(1, 3)),
+ id = TRUE, idlabs = row.names(rs.by.country)
+)
+[% END %]
+
+to interactively identify countries on a ternary plot. (Again, right
+click stops the process.)
