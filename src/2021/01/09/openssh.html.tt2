@@ -1,0 +1,3 @@
+[% global.title = 'Exporting OpenSSH host key to Dropbear' %]
+
+One has to use PuTTYgen to convert new OpenSSH private keys to old-format OpenSSH private keys, then use @dropbearconvert@. Who knew?
