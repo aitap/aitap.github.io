@@ -18,6 +18,9 @@
 		<link href="/atom.xml" type="application/atom+xml" rel="alternate" title="Atom feed">
 	</head>
 	<body>
+		
+			<a href="/">&larr; Back to the index</a>
+		
 		<h1>Histogram flattening palette in R</h1>
 		<div class="content">
 			<p>If you've ever done digital photo processing, you've probably used the <a href="https://docs.gimp.org/en/gimp-tool-curves.html">Curves</a> tool that provides an intuitive way to enhance contrast in some brightness ranges by scarificing it in other ranges. Basically, the steeper the curve is, the more contrast will increase. But resulting brightness range has to stay the same, so if you increase the slope anywhere, you then have to decrease it somewhere else (or cut off some brightness values, making them insidtinguishable).</p>
@@ -95,21 +98,21 @@
 <pre>
 histeq<span style="color:#000000">.</span>palette <span style="color:#000000">&lt;-</span> <span style="color:#000000; font-weight:bold">function</span><span style="color:#000000">(</span>x<span style="color:#000000">,</span> pal<span style="color:#000000">,</span> max<span style="color:#000000">.</span>col<span style="color:#000000">=</span><span style="color:#b07e00">2048</span><span style="color:#000000">, ...) {</span>
 	<span style="color:#000000; font-weight:bold">function</span><span style="color:#000000">(</span>n<span style="color:#000000">) {</span>
-		<span style="color:#838183; font-style:italic"># palette is assumed to be linear; we're transforming its scale from linear to CDF-shaped</span>
+		<span style="color:#838183; font-style:italic"># palette is assumed to be linear; we&apos;re transforming its scale from linear to CDF-shaped</span>
 		grid <span style="color:#000000">&lt;-</span> <span style="color:#010181">seq</span><span style="color:#000000">(</span>from<span style="color:#000000">=</span><span style="color:#010181">min</span><span style="color:#000000">(</span>x<span style="color:#000000">),</span> to<span style="color:#000000">=</span><span style="color:#010181">max</span><span style="color:#000000">(</span>x<span style="color:#000000">),</span> length<span style="color:#000000">.</span>out<span style="color:#000000">=</span>n<span style="color:#000000">)</span>
 		coords <span style="color:#000000">&lt;-</span> <span style="color:#010181">ecdf</span><span style="color:#000000">(</span>x<span style="color:#000000">)(</span>grid<span style="color:#000000">)</span>
 
 		<span style="color:#838183; font-style:italic"># so, coords[zeroes+1] - coords[zeroes] == 0</span>
 		zeroes <span style="color:#000000">&lt;-</span> <span style="color:#010181">which</span><span style="color:#000000">(</span><span style="color:#010181">diff</span><span style="color:#000000">(</span>coords<span style="color:#000000">) ==</span> <span style="color:#b07e00">0</span><span style="color:#000000">)</span>
 		<span style="color:#838183; font-style:italic"># ECDF is right-continuous, so the last point is always bigger than second-to-last</span>
-		<span style="color:#838183; font-style:italic"># but we can still have problems at the first point, which we shouldn't try to extrapolate</span>
+		<span style="color:#838183; font-style:italic"># but we can still have problems at the first point, which we shouldn&apos;t try to extrapolate</span>
 		zeroes<span style="color:#000000">[</span>zeroes<span style="color:#000000">==</span><span style="color:#b07e00">1</span><span style="color:#000000">] &lt;-</span> <span style="color:#b07e00">2</span> <span style="color:#838183; font-style:italic"># if coords[2] == coords[1], interpolate second, not first</span>
 		<span style="color:#838183; font-style:italic"># replace points where diff=0 with linear interpolation</span>
 		coords<span style="color:#000000">[</span>zeroes<span style="color:#000000">] &lt;-</span> <span style="color:#010181">approx</span><span style="color:#000000">(</span>grid<span style="color:#000000">[-</span>zeroes<span style="color:#000000">],</span> coords<span style="color:#000000">[-</span>zeroes<span style="color:#000000">],</span> grid<span style="color:#000000">[</span>zeroes<span style="color:#000000">])</span>$y
 
 		<span style="color:#838183; font-style:italic"># now that every coordinate is different, we know how many colors to request</span>
 		<span style="color:#838183; font-style:italic"># so that every index would be different, too</span>
-		<span style="color:#838183; font-style:italic"># but don't request too many colours because they won't be unique anyway</span>
+		<span style="color:#838183; font-style:italic"># but don&apos;t request too many colours because they won&apos;t be unique anyway</span>
 		n<span style="color:#000000">.</span>pal <span style="color:#000000">&lt;-</span> <span style="color:#010181">ceiling</span><span style="color:#000000">(</span><span style="color:#010181">min</span><span style="color:#000000">(</span>max<span style="color:#000000">.</span>col<span style="color:#000000">,</span> <span style="color:#b07e00">1</span><span style="color:#000000">/</span><span style="color:#010181">min</span><span style="color:#000000">(</span><span style="color:#010181">diff</span><span style="color:#000000">(</span>coords<span style="color:#000000">))))</span>
 		<span style="color:#010181">pal</span><span style="color:#000000">(</span>n<span style="color:#000000">.</span>pal<span style="color:#000000">, ...)[</span><span style="color:#010181">round</span><span style="color:#000000">(</span><span style="color:#b07e00">1</span><span style="color:#000000">+</span>coords<span style="color:#000000">*(</span>n<span style="color:#000000">.</span>pal<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">))]</span>
 	<span style="color:#000000">}</span>

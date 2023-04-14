@@ -18,6 +18,9 @@
 		<link href="/atom.xml" type="application/atom+xml" rel="alternate" title="Atom feed">
 	</head>
 	<body>
+		
+			<a href="/">&larr; Back to the index</a>
+		
 		<h1>Dear developers,</h1>
 		<div class="content">
 			<p>When you write a program, or a library (especially a library!), please don't bundle third-party code you depend on together with your own.</p>
@@ -61,7 +64,7 @@ tiff_binfile.c:79:8: error: dereferencing pointer to incomplete type ‘TIFF {ak
 <pre>
 <span style="color:#838183; font-style:italic">/*</span>
 <span style="color:#838183; font-style:italic"> * TIFF is defined as an incomplete type to hide the</span>
-<span style="color:#838183; font-style:italic"> * library's internal data structures from clients.</span>
+<span style="color:#838183; font-style:italic"> * library&apos;s internal data structures from clients.</span>
 <span style="color:#838183; font-style:italic"> */</span>
 <span style="color:#000000; font-weight:bold">typedef</span> <span style="color:#0057ae">struct</span> tiff TIFF<span style="color:#000000">;</span>
 </pre>

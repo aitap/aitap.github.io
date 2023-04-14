@@ -18,6 +18,9 @@
 		<link href="/atom.xml" type="application/atom+xml" rel="alternate" title="Atom feed">
 	</head>
 	<body>
+		
+			<a href="/">&larr; Back to the index</a>
+		
 		<h1>Installing Skype 8 for Linux on 32-bit Debian 9 (Stretch)</h1>
 		<div class="content">
 			<p>First things first, there are no miracles: you still need a 64-bit processor to run <code>skypeforlinux64.deb</code>. In fact, quite a lot of code we're going to install is going to be 64-bit, so let's get started:</p>
@@ -26,7 +29,7 @@
 
 <pre>
 <span style="color:#838183; font-style:italic"># Enable multiarch to allow installing non-i386 packages</span>
-dpkg <span style="color:#000000">--</span>add-architecture amd64
+dpkg <span style="color:#0057ae">--add-architecture</span> amd64
 apt update
 <span style="color:#838183; font-style:italic"># Install the 64-bit kernel to run both 32-bit and 64-bit binaries</span>
 apt <span style="color:#000000; font-weight:bold">install</span> linux-image-amd64
@@ -40,8 +43,8 @@ apt <span style="color:#000000; font-weight:bold">install</span> linux-image-amd
 
 <pre>
 <span style="color:#838183; font-style:italic"># This part is optional, but doing this ensures that amd64 kernel is going to be default in GRUB menu</span>
-apt purge linux-<span style="color:#000000">{</span>image<span style="color:#000000">,</span>headers<span style="color:#000000">}*</span><span style="color:#b07e00">686</span><span style="color:#000000">-</span>pae
-apt <span style="color:#000000">--</span>purge autoremove
+apt purge linux-<span style="color:#000000">{</span>image<span style="color:#000000">,</span>headers<span style="color:#000000">}*</span><span style="color:#b07e00">686</span><span style="color:#0057ae">-pae</span>
+apt <span style="color:#0057ae">--purge</span> autoremove
 </pre>
 
 
@@ -104,21 +107,21 @@ The package is not co-installable and <em>should be allowed to satisfy the depen
 <span style="color:#838183; font-style:italic"># Install the packages required to build APT and then some</span>
 apt-get build-dep apt devscripts
 <span style="color:#838183; font-style:italic"># Create an empty directory to work in</span>
-<span style="color:#0057ae">cd</span> $<span style="color:#000000">(</span>mktemp <span style="color:#000000">-</span>d .<span style="color:#000000">/</span>apt-XXX<span style="color:#000000">)</span>
+<span style="color:#0057ae">cd</span> $<span style="color:#000000">(</span>mktemp <span style="color:#0057ae">-d</span> .<span style="color:#000000">/</span>apt-XXX<span style="color:#000000">)</span>
 <span style="color:#838183; font-style:italic"># Download the apt source code</span>
 apt-get <span style="color:#0057ae">source</span> apt <span style="color:#838183; font-style:italic"># I wanted to sneak a GEB reference here, but, well, here it is</span>
 <span style="color:#838183; font-style:italic"># Change directory to the source code itself</span>
 <span style="color:#0057ae">cd</span> apt-<span style="color:#000000">*</span>
 <span style="color:#838183; font-style:italic"># Insert the missing line in the description of apt-transport-https</span>
-<span style="color:#000000; font-weight:bold">sed</span> <span style="color:#000000">-</span>i <span style="color:#bf0303">'/^Package: apt-transport-https$/aMulti-Arch: foreign'</span> debian<span style="color:#000000">/</span>control
+<span style="color:#000000; font-weight:bold">sed</span> <span style="color:#0057ae">-i</span> <span style="color:#bf0303">&apos;/^Package: apt-transport-https$/aMulti-Arch: foreign&apos;</span> debian<span style="color:#000000">/</span>control
 <span style="color:#838183; font-style:italic"># Increment the version in the changelog so that the original from the repo</span>
-<span style="color:#838183; font-style:italic"># wouldn't override the locally patched package next time you run apt upgrade</span>
-dch <span style="color:#000000">--</span><span style="color:#0057ae">local</span><span style="color:#000000">=</span><span style="color:#bf0303">'multiarch'</span> <span style="color:#bf0303">&quot;Mark the package as multi-arch foreign to satisfy skype dependencies&quot;</span>
+<span style="color:#838183; font-style:italic"># wouldn&apos;t override the locally patched package next time you run apt upgrade</span>
+dch <span style="color:#0057ae">--local</span><span style="color:#000000">=</span><span style="color:#bf0303">&apos;multiarch&apos;</span> <span style="color:#bf0303">&quot;Mark the package as multi-arch foreign to satisfy skype dependencies&quot;</span>
 <span style="color:#838183; font-style:italic"># dch will warn you that the current directory has been renamed,</span>
-<span style="color:#838183; font-style:italic"># so let's change into it to avoid confusion</span>
+<span style="color:#838183; font-style:italic"># so let&apos;s change into it to avoid confusion</span>
 <span style="color:#0057ae">cd</span> ..<span style="color:#000000">/</span>apt-<span style="color:#000000">*</span>
 <span style="color:#838183; font-style:italic"># Build the packages. ALL OF THEM!</span>
-dpkg-buildpackage <span style="color:#000000">-</span>uc <span style="color:#000000">-</span>us
+dpkg-buildpackage <span style="color:#0057ae">-uc -us</span>
 </pre>
 
 
@@ -132,7 +135,7 @@ dpkg-buildpackage <span style="color:#000000">-</span>uc <span style="color:#000
 
 
 <pre>
-dpkg <span style="color:#000000">-</span>i ..<span style="color:#000000">/</span>apt-transport-https<span style="color:#000000">*</span>.deb
+dpkg <span style="color:#0057ae">-i</span> ..<span style="color:#000000">/</span>apt-transport-https<span style="color:#000000">*</span>.deb
 </pre>
 
 
@@ -142,8 +145,8 @@ dpkg <span style="color:#000000">-</span>i ..<span style="color:#000000">/</span
 
 
 <pre>
-dpkg <span style="color:#000000">-</span>i ...<span style="color:#000000">/</span>path<span style="color:#000000">/</span>to<span style="color:#000000">/</span>skypeforlinux64.deb
-apt-get <span style="color:#000000; font-weight:bold">install</span> <span style="color:#000000">-</span>f
+dpkg <span style="color:#0057ae">-i</span> ...<span style="color:#000000">/</span>path<span style="color:#000000">/</span>to<span style="color:#000000">/</span>skypeforlinux64.deb
+apt-get <span style="color:#000000; font-weight:bold">install</span> <span style="color:#0057ae">-f</span>
 </pre>
 
 

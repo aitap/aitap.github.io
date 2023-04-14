@@ -18,6 +18,9 @@
 		<link href="/atom.xml" type="application/atom+xml" rel="alternate" title="Atom feed">
 	</head>
 	<body>
+		
+			<a href="/">&larr; Back to the index</a>
+		
 		<h1>Some things should not be expressed in SQL</h1>
 		<div class="content">
 			<p>I have a confession to make.</p>
@@ -43,7 +46,7 @@
 	a.src_id <span style="color:#000000">=</span> <span style="color:#b07e00">2</span>
 	<span style="color:#000000; font-weight:bold">and</span> b.src_id <span style="color:#000000">=</span> <span style="color:#b07e00">1</span>
 	<span style="color:#000000; font-weight:bold">and</span> <span style="color:#000000">(</span>
-		<span style="color:#838183; font-style:italic">-- thankfully, param1 and param2 have similar scales, or I'd have to invent a complex cost function</span>
+		<span style="color:#838183; font-style:italic">-- thankfully, param1 and param2 have similar scales, or I&apos;d have to invent a complex cost function</span>
 		<span style="color:#000000; font-weight:bold">select min</span><span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">abs</span><span style="color:#000000">(</span>bb.param1<span style="color:#000000">-</span>a.param1<span style="color:#000000">) +</span> <span style="color:#000000; font-weight:bold">abs</span><span style="color:#000000">(</span>bb.param2<span style="color:#000000">-</span>a.param2<span style="color:#000000">))</span>
 		<span style="color:#000000; font-weight:bold">from</span> physparams bb
 		<span style="color:#000000; font-weight:bold">where</span>
@@ -65,7 +68,7 @@
 
 
 <pre>
-<span style="color:#000000; font-weight:bold">my</span> <span style="color:#0057ae">$get</span> <span style="color:#000000">=</span> <span style="color:#0057ae">$db</span><span style="color:#000000">-&gt;</span><span style="color:#010181">prepare</span><span style="color:#000000">(</span><span style="color:#bf0303">'select id, param1, param2, param3, param4 from physparams where src_id = ?'</span><span style="color:#000000">);</span>
+<span style="color:#000000; font-weight:bold">my</span> <span style="color:#0057ae">$get</span> <span style="color:#000000">=</span> <span style="color:#0057ae">$db</span><span style="color:#000000">-&gt;</span><span style="color:#010181">prepare</span><span style="color:#000000">(</span><span style="color:#bf0303">&apos;select id, param1, param2, param3, param4 from physparams where src_id = ?&apos;</span><span style="color:#000000">);</span>
 <span style="color:#0057ae">$get</span><span style="color:#000000">-&gt;</span><span style="color:#010181">bind_columns</span><span style="color:#000000">(</span>\<span style="color:#000000; font-weight:bold">my</span><span style="color:#000000">(</span><span style="color:#0057ae">$id</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param1 $param2</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param3</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param4</span><span style="color:#000000">));</span>
 
 <span style="color:#000000; font-weight:bold">open my</span> <span style="color:#0057ae">$fh</span><span style="color:#000000">,</span> <span style="color:#bf0303">&quot;&gt;:raw&quot;</span><span style="color:#000000">,</span> <span style="color:#bf0303">&quot;db1.bin&quot;</span><span style="color:#000000">;</span>
