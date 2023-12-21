@@ -3,7 +3,7 @@
 	<title>Perhaps I should start a blog</title>
 	<link href="https://aitap.github.io/" />
 	<id>https://aitap.github.io/atom.xml</id> <!-- it's an IRI all right -->
-	<updated>2023-11-16T00:00:00Z</updated>
+	<updated>2024-01-06T00:00:00Z</updated>
 	<author>
 		<name>Ivan Krylov</name>
 		<email>krylov.r00t@gmail.com</email>
@@ -103,6 +103,8 @@
 
 
 <p>This is not to say that <span class="caps">CRAN </span>is "better" than <span class="caps">NPM, </span>or R is "better" than JavaScript. Certainly not: what works well for a small group of statisticians has no reason to work well for the much larger worldwide JavaScript community. If anything, <span class="caps">CRAN </span>is <strong>not</strong> without its own problems: despite the median package requiring only 5 total dependencies, heavy tails like <a href="https://cran.r-project.org/package=smartdata">smartdata</a> with 235 required dependencies skew the average towards 20 and the later quantiles towards 60. Tidyverse itself, with 86 total required dependencies, is above 95th quantile by that parameter, but is being heavily advertised as the solution for many things, and it shows as a group of outliers on some of the plots we can make.</p>
+
+<p><strong>See also</strong>: <a href="https://journal.r-project.org/articles/RJ-2023-060/" title="R Journal article">Zhang, Li, &amp; Zhang (2023)</a> give it a more thoughtful formal treatment but from a different perspective.</p>
 				</div>
 			</content>
 		</entry>
@@ -130,7 +132,7 @@
 
 
 <pre>
-$ curl -s http://example.org/whatever.js | zcat | python3 -c &apos;import jsbeautifier; jsbeautifier.main()&apos; -
+$ curl -s http://example.org/whatever.js | zcat | python3 -c 'import jsbeautifier; jsbeautifier.main()' -
 ! function() {
     function t() {
         try {
@@ -184,7 +186,7 @@ HTTP/1.1 404 Not Found
         <span style="color:#000000; font-weight:bold">var</span> keywords <span style="color:#000000">= [];</span>
 
         <span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">words</span><span style="color:#000000">(</span>str<span style="color:#000000">) {</span>
-            <span style="color:#000000; font-weight:bold">return</span> str<span style="color:#000000">.</span><span style="color:#010181">replace</span><span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">/[^a-zA-Z0-9а-яА-Я-ёЁ ]+/g</span><span style="color:#000000">,</span> <span style="color:#bf0303">&apos;</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">).</span><span style="color:#010181">replace</span><span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">/\s\s+/g</span><span style="color:#000000">,</span> <span style="color:#bf0303">&apos;</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">).</span><span style="color:#010181">replace</span><span style="color:#000000">(</span><span style="color:#bf0303">&quot; - &quot;</span><span style="color:#000000">,</span> <span style="color:#bf0303">&apos;</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">).</span><span style="color:#010181">trim</span><span style="color:#000000">().</span><span style="color:#010181">split</span><span style="color:#000000">(</span><span style="color:#bf0303">&apos;</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">);</span>
+            <span style="color:#000000; font-weight:bold">return</span> str<span style="color:#000000">.</span><span style="color:#010181">replace</span><span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">/[^a-zA-Z0-9а-яА-Я-ёЁ ]+/g</span><span style="color:#000000">,</span> <span style="color:#bf0303">'</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">'</span><span style="color:#000000">).</span><span style="color:#010181">replace</span><span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">/\s\s+/g</span><span style="color:#000000">,</span> <span style="color:#bf0303">'</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">'</span><span style="color:#000000">).</span><span style="color:#010181">replace</span><span style="color:#000000">(</span><span style="color:#bf0303">&quot; - &quot;</span><span style="color:#000000">,</span> <span style="color:#bf0303">'</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">'</span><span style="color:#000000">).</span><span style="color:#010181">trim</span><span style="color:#000000">().</span><span style="color:#010181">split</span><span style="color:#000000">(</span><span style="color:#bf0303">'</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">'</span><span style="color:#000000">);</span>
         <span style="color:#000000">}</span>
         <span style="color:#000000; font-weight:bold">if</span> <span style="color:#000000">(</span>document<span style="color:#000000">.</span>title<span style="color:#000000">) {</span>
             keywords <span style="color:#000000">=</span> keywords<span style="color:#000000">.</span><span style="color:#010181">concat</span><span style="color:#000000">(</span><span style="color:#010181">words</span><span style="color:#000000">(</span>document<span style="color:#000000">.</span>title<span style="color:#000000">));</span>
@@ -202,17 +204,17 @@ HTTP/1.1 404 Not Found
                 keywords<span style="color:#000000">[</span>i<span style="color:#000000">] =</span> keywords<span style="color:#000000">[</span>i<span style="color:#000000">].</span><span style="color:#010181">substr</span><span style="color:#000000">(</span><span style="color:#b07e00">0</span><span style="color:#000000">,</span> <span style="color:#b07e00">40</span><span style="color:#000000">);</span>
             <span style="color:#000000">}</span>
         <span style="color:#000000">}</span>
-        <span style="color:#000000; font-weight:bold">var</span> ret <span style="color:#000000">=</span> <span style="color:#bf0303">&apos;&apos;</span><span style="color:#000000">;</span>
+        <span style="color:#000000; font-weight:bold">var</span> ret <span style="color:#000000">=</span> <span style="color:#bf0303">''</span><span style="color:#000000">;</span>
         <span style="color:#000000; font-weight:bold">for</span> <span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">var</span> i <span style="color:#000000">=</span> <span style="color:#b07e00">1</span><span style="color:#000000">;</span> i <span style="color:#000000">&lt;</span> keywords<span style="color:#000000">.</span>length <span style="color:#000000">+</span> <span style="color:#b07e00">1</span><span style="color:#000000">;</span> i<span style="color:#000000">++) {</span>
             <span style="color:#000000; font-weight:bold">var</span> slice <span style="color:#000000">=</span> keywords<span style="color:#000000">.</span><span style="color:#010181">slice</span><span style="color:#000000">(</span><span style="color:#b07e00">0</span><span style="color:#000000">,</span> i<span style="color:#000000">);</span>
-            <span style="color:#000000; font-weight:bold">var</span> squeezed <span style="color:#000000">=</span> slice<span style="color:#000000">[</span><span style="color:#bf0303">&quot;join&quot;</span><span style="color:#000000">](</span><span style="color:#bf0303">&apos;,&apos;</span><span style="color:#000000">);</span>
+            <span style="color:#000000; font-weight:bold">var</span> squeezed <span style="color:#000000">=</span> slice<span style="color:#000000">[</span><span style="color:#bf0303">&quot;join&quot;</span><span style="color:#000000">](</span><span style="color:#bf0303">','</span><span style="color:#000000">);</span>
             <span style="color:#000000; font-weight:bold">if</span> <span style="color:#000000">(</span>squeezed<span style="color:#000000">.</span>length <span style="color:#000000">&lt;=</span> <span style="color:#b07e00">200</span><span style="color:#000000">) {</span>
                 ret <span style="color:#000000">=</span> squeezed<span style="color:#000000">;</span>
             <span style="color:#000000">}</span>
         <span style="color:#000000">}</span>
 
         <span style="color:#000000; font-weight:bold">function</span> <span style="color:#010181">hostname</span><span style="color:#000000">() {</span>
-            <span style="color:#000000; font-weight:bold">return</span> <span style="color:#bf0303">&quot;,%%&quot;</span> <span style="color:#000000">+</span> window<span style="color:#000000">.</span>location<span style="color:#000000">.</span>hostname<span style="color:#000000">.</span><span style="color:#010181">replace</span><span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">/\./g</span><span style="color:#000000">,</span> <span style="color:#bf0303">&apos;%&apos;</span><span style="color:#000000">) +</span> <span style="color:#bf0303">&apos;%%&apos;</span><span style="color:#000000">;</span>
+            <span style="color:#000000; font-weight:bold">return</span> <span style="color:#bf0303">&quot;,%%&quot;</span> <span style="color:#000000">+</span> window<span style="color:#000000">.</span>location<span style="color:#000000">.</span>hostname<span style="color:#000000">.</span><span style="color:#010181">replace</span><span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">/\./g</span><span style="color:#000000">,</span> <span style="color:#bf0303">'%'</span><span style="color:#000000">) +</span> <span style="color:#bf0303">'%%'</span><span style="color:#000000">;</span>
         <span style="color:#000000">}</span>
         <span style="color:#000000; font-weight:bold">return</span> ret<span style="color:#000000">.</span><span style="color:#010181">trim</span><span style="color:#000000">() +</span> <span style="color:#010181">hostname</span><span style="color:#000000">();</span>
     <span style="color:#000000">}</span>
@@ -233,21 +235,21 @@ HTTP/1.1 404 Not Found
         div<span style="color:#000000">.</span>innerHTML <span style="color:#000000">=</span> <span style="color:#bf0303">&quot;&lt;!--Start of Floodlight Tag: Please do not remove Activity name of this tag: sync_activity URL of the webpage &quot;</span> <span style="color:#000000">+</span>
             <span style="color:#bf0303">&quot;where the tag is expected to be placed: This tag must be placed between the &lt;body&gt; and &lt;/body&gt; tags, as close as possible &quot;</span> <span style="color:#000000">+</span>
             <span style="color:#bf0303">&quot;to the opening tag. Creation Date: 04/22/2020--&gt;&lt;script type=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">text/javascript</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">&gt;var axel = Math.random() +</span> <span style="color:#ff00ff">\&quot;\&quot;</span><span style="color:#bf0303">;var a = &quot;</span> <span style="color:#000000">+</span>
-            <span style="color:#bf0303">&quot;axel * 10000000000000;document.write(&quot;</span> <span style="color:#000000">+</span> <span style="color:#bf0303">&apos;&lt;iframe</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">src=</span><span style="color:#ff00ff">\x22</span><span style="color:#bf0303">https://10028645.fls.doubleclick.net/activityi;src=10028645;&apos;</span> <span style="color:#000000">+</span>
-            <span style="color:#bf0303">&apos;type=syncd0;cat=sync_0;u1=&apos;</span> <span style="color:#000000">+</span> uid <span style="color:#000000">+</span> <span style="color:#bf0303">&quot;;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;npa=;ord=&quot;</span> <span style="color:#000000">+</span> <span style="color:#bf0303">&quot; + a + &quot;</span> <span style="color:#000000">+</span>
-            <span style="color:#bf0303">&quot;?</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">width=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">1</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">height=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">1</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">frameborder=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">0</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">style=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">display:none</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">&gt;&lt;/iframe&gt;&quot;</span> <span style="color:#000000">+</span> <span style="color:#bf0303">&quot;);&lt;/script&gt;&lt;noscript&gt;&lt;iframe src=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">&quot;</span> <span style="color:#000000">+</span>
+            <span style="color:#bf0303">&quot;axel * 10000000000000;document.write(&quot;</span> <span style="color:#000000">+</span> <span style="color:#bf0303">'&lt;iframe</span><span style="color:#ff00ff">\x20</span><span style="color:#bf0303">src=</span><span style="color:#ff00ff">\x22</span><span style="color:#bf0303">https://10028645.fls.doubleclick.net/activityi;src=10028645;'</span> <span style="color:#000000">+</span>
+            <span style="color:#bf0303">'type=syncd0;cat=sync_0;u1='</span> <span style="color:#000000">+</span> uid <span style="color:#000000">+</span> <span style="color:#bf0303">&quot;;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;npa=;ord=&quot;</span> <span style="color:#000000">+</span> <span style="color:#bf0303">&quot; + a + &quot;</span> <span style="color:#000000">+</span>
+            <span style="color:#bf0303">&quot;?</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">width=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">1</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">height=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">1</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">frameborder=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">0</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">style=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">display:none</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">&gt;&lt;/iframe&gt;&quot; + &quot;);&lt;/script&gt;&lt;noscript&gt;&lt;iframe src=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">&quot;</span> <span style="color:#000000">+</span>
             <span style="color:#bf0303">&quot;https://10028645.fls.doubleclick.net/activityi;src=10028645;type=syncd0;cat=sync_0;u1=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">&quot;</span> <span style="color:#000000">+</span> uid <span style="color:#000000">+</span> <span style="color:#bf0303">&quot;</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">;dc_lat=;dc_rdid=;&quot;</span> <span style="color:#000000">+</span>
             <span style="color:#bf0303">&quot;tag_for_child_directed_treatment=;tfua=;npa=;ord=1?</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">width=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">1</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">height=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">1</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">frameborder=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">0</span><span style="color:#ff00ff">\&quot;</span> <span style="color:#bf0303">style=</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">display:none</span><span style="color:#ff00ff">\&quot;</span><span style="color:#bf0303">&quot;</span> <span style="color:#000000">+</span>
             <span style="color:#bf0303">&quot;&gt;&lt;/iframe&gt;&lt;/noscript&gt;&lt;!-- End of Floodlight Tag: Please do not remove --&gt;&quot;</span><span style="color:#000000">;</span>
         document<span style="color:#000000">.</span>body<span style="color:#000000">.</span><span style="color:#010181">append</span><span style="color:#000000">(</span>div<span style="color:#000000">);</span>
     <span style="color:#000000">}</span>
-    <span style="color:#000000; font-weight:bold">var</span> p <span style="color:#000000">=</span> <span style="color:#bf0303">&apos;&apos;</span><span style="color:#000000">;</span>
+    <span style="color:#000000; font-weight:bold">var</span> p <span style="color:#000000">=</span> <span style="color:#bf0303">''</span><span style="color:#000000">;</span>
     <span style="color:#000000; font-weight:bold">var</span> datasync <span style="color:#000000">=</span> <span style="color:#000000; font-weight:bold">false</span><span style="color:#000000">;</span>
-    <span style="color:#000000; font-weight:bold">var</span> uid <span style="color:#000000">=</span> <span style="color:#bf0303">&apos;aIMxoXBLDRyEzMqIjfKa0Q==&apos;</span><span style="color:#000000">;</span>
+    <span style="color:#000000; font-weight:bold">var</span> uid <span style="color:#000000">=</span> <span style="color:#bf0303">'aIMxoXBLDRyEzMqIjfKa0Q=='</span><span style="color:#000000">;</span>
     <span style="color:#000000; font-weight:bold">if</span> <span style="color:#000000">(</span>datasync<span style="color:#000000">) {</span>
         <span style="color:#010181">make_iframe</span><span style="color:#000000">(</span>uid<span style="color:#000000">);</span>
     <span style="color:#000000">}</span>
-    <span style="color:#000000; font-weight:bold">var</span> adbase_url <span style="color:#000000">=</span> <span style="color:#bf0303">&quot;http://p.tlrtb.com/ad/base.js?&quot;</span> <span style="color:#000000">+ (</span>p <span style="color:#000000">?</span> p <span style="color:#000000">+</span> <span style="color:#bf0303">&apos;&amp;&apos;</span> <span style="color:#000000">:</span> <span style="color:#bf0303">&apos;&apos;</span><span style="color:#000000">) +</span> <span style="color:#bf0303">&quot;kw=&quot;</span> <span style="color:#000000">+</span> <span style="color:#010181">encodeURIComponent</span><span style="color:#000000">(</span><span style="color:#010181">get_keywords</span><span style="color:#000000">()) +</span> <span style="color:#bf0303">&quot;&amp;utcoffset=&quot;</span> <span style="color:#000000">+</span> <span style="color:#010181">utcoffset</span><span style="color:#000000">();</span>
+    <span style="color:#000000; font-weight:bold">var</span> adbase_url <span style="color:#000000">=</span> <span style="color:#bf0303">&quot;http://p.tlrtb.com/ad/base.js?&quot;</span> <span style="color:#000000">+ (</span>p <span style="color:#000000">?</span> p <span style="color:#000000">+</span> <span style="color:#bf0303">'&amp;'</span> <span style="color:#000000">:</span> <span style="color:#bf0303">''</span><span style="color:#000000">) +</span> <span style="color:#bf0303">&quot;kw=&quot;</span> <span style="color:#000000">+</span> <span style="color:#010181">encodeURIComponent</span><span style="color:#000000">(</span><span style="color:#010181">get_keywords</span><span style="color:#000000">()) +</span> <span style="color:#bf0303">&quot;&amp;utcoffset=&quot;</span> <span style="color:#000000">+</span> <span style="color:#010181">utcoffset</span><span style="color:#000000">();</span>
     <span style="color:#010181">load_script</span><span style="color:#000000">(</span>adbase_url<span style="color:#000000">);</span>
 <span style="color:#000000">}());</span>
 </pre>
@@ -307,7 +309,7 @@ HTTP/1.1 404 Not Found
 	a.src_id <span style="color:#000000">=</span> <span style="color:#b07e00">2</span>
 	<span style="color:#000000; font-weight:bold">and</span> b.src_id <span style="color:#000000">=</span> <span style="color:#b07e00">1</span>
 	<span style="color:#000000; font-weight:bold">and</span> <span style="color:#000000">(</span>
-		<span style="color:#838183; font-style:italic">-- thankfully, param1 and param2 have similar scales, or I&apos;d have to invent a complex cost function</span>
+		<span style="color:#838183; font-style:italic">-- thankfully, param1 and param2 have similar scales, or I'd have to invent a complex cost function</span>
 		<span style="color:#000000; font-weight:bold">select min</span><span style="color:#000000">(</span><span style="color:#000000; font-weight:bold">abs</span><span style="color:#000000">(</span>bb.param1<span style="color:#000000">-</span>a.param1<span style="color:#000000">) +</span> <span style="color:#000000; font-weight:bold">abs</span><span style="color:#000000">(</span>bb.param2<span style="color:#000000">-</span>a.param2<span style="color:#000000">))</span>
 		<span style="color:#000000; font-weight:bold">from</span> physparams bb
 		<span style="color:#000000; font-weight:bold">where</span>
@@ -329,7 +331,7 @@ HTTP/1.1 404 Not Found
 
 
 <pre>
-<span style="color:#000000; font-weight:bold">my</span> <span style="color:#0057ae">$get</span> <span style="color:#000000">=</span> <span style="color:#0057ae">$db</span><span style="color:#000000">-&gt;</span><span style="color:#010181">prepare</span><span style="color:#000000">(</span><span style="color:#bf0303">&apos;select id, param1, param2, param3, param4 from physparams where src_id = ?&apos;</span><span style="color:#000000">);</span>
+<span style="color:#000000; font-weight:bold">my</span> <span style="color:#0057ae">$get</span> <span style="color:#000000">=</span> <span style="color:#0057ae">$db</span><span style="color:#000000">-&gt;</span><span style="color:#010181">prepare</span><span style="color:#000000">(</span><span style="color:#bf0303">'select id, param1, param2, param3, param4 from physparams where src_id = ?'</span><span style="color:#000000">);</span>
 <span style="color:#0057ae">$get</span><span style="color:#000000">-&gt;</span><span style="color:#010181">bind_columns</span><span style="color:#000000">(</span>\<span style="color:#000000; font-weight:bold">my</span><span style="color:#000000">(</span><span style="color:#0057ae">$id</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param1 $param2</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param3</span><span style="color:#000000">,</span> <span style="color:#0057ae">$param4</span><span style="color:#000000">));</span>
 
 <span style="color:#000000; font-weight:bold">open my</span> <span style="color:#0057ae">$fh</span><span style="color:#000000">,</span> <span style="color:#bf0303">&quot;&gt;:raw&quot;</span><span style="color:#000000">,</span> <span style="color:#bf0303">&quot;db1.bin&quot;</span><span style="color:#000000">;</span>
@@ -657,7 +659,7 @@ tiff_binfile.c:79:8: error: dereferencing pointer to incomplete type ‘TIFF {ak
 <pre>
 <span style="color:#838183; font-style:italic">/*</span>
 <span style="color:#838183; font-style:italic"> * TIFF is defined as an incomplete type to hide the</span>
-<span style="color:#838183; font-style:italic"> * library&apos;s internal data structures from clients.</span>
+<span style="color:#838183; font-style:italic"> * library's internal data structures from clients.</span>
 <span style="color:#838183; font-style:italic"> */</span>
 <span style="color:#000000; font-weight:bold">typedef</span> <span style="color:#0057ae">struct</span> tiff TIFF<span style="color:#000000">;</span>
 </pre>
@@ -781,7 +783,7 @@ cluster <span style="color:#000000">&lt;-</span> <span style="color:#010181">mak
 
 <pre>
 <span style="color:#838183; font-style:italic"># Enable multiarch to allow installing non-i386 packages</span>
-dpkg <span style="color:#0057ae">--add-architecture</span> amd64
+dpkg <span style="color:#000000">--</span>add-architecture amd64
 apt update
 <span style="color:#838183; font-style:italic"># Install the 64-bit kernel to run both 32-bit and 64-bit binaries</span>
 apt <span style="color:#000000; font-weight:bold">install</span> linux-image-amd64
@@ -795,8 +797,8 @@ apt <span style="color:#000000; font-weight:bold">install</span> linux-image-amd
 
 <pre>
 <span style="color:#838183; font-style:italic"># This part is optional, but doing this ensures that amd64 kernel is going to be default in GRUB menu</span>
-apt purge linux-<span style="color:#000000">{</span>image<span style="color:#000000">,</span>headers<span style="color:#000000">}*</span><span style="color:#b07e00">686</span><span style="color:#0057ae">-pae</span>
-apt <span style="color:#0057ae">--purge</span> autoremove
+apt purge linux-<span style="color:#000000">{</span>image<span style="color:#000000">,</span>headers<span style="color:#000000">}*</span><span style="color:#b07e00">686</span><span style="color:#000000">-</span>pae
+apt <span style="color:#000000">--</span>purge autoremove
 </pre>
 
 
@@ -859,21 +861,21 @@ The package is not co-installable and <em>should be allowed to satisfy the depen
 <span style="color:#838183; font-style:italic"># Install the packages required to build APT and then some</span>
 apt-get build-dep apt devscripts
 <span style="color:#838183; font-style:italic"># Create an empty directory to work in</span>
-<span style="color:#0057ae">cd</span> $<span style="color:#000000">(</span>mktemp <span style="color:#0057ae">-d</span> .<span style="color:#000000">/</span>apt-XXX<span style="color:#000000">)</span>
+<span style="color:#0057ae">cd</span> $<span style="color:#000000">(</span>mktemp <span style="color:#000000">-</span>d .<span style="color:#000000">/</span>apt-XXX<span style="color:#000000">)</span>
 <span style="color:#838183; font-style:italic"># Download the apt source code</span>
 apt-get <span style="color:#0057ae">source</span> apt <span style="color:#838183; font-style:italic"># I wanted to sneak a GEB reference here, but, well, here it is</span>
 <span style="color:#838183; font-style:italic"># Change directory to the source code itself</span>
 <span style="color:#0057ae">cd</span> apt-<span style="color:#000000">*</span>
 <span style="color:#838183; font-style:italic"># Insert the missing line in the description of apt-transport-https</span>
-<span style="color:#000000; font-weight:bold">sed</span> <span style="color:#0057ae">-i</span> <span style="color:#bf0303">&apos;/^Package: apt-transport-https$/aMulti-Arch: foreign&apos;</span> debian<span style="color:#000000">/</span>control
+<span style="color:#000000; font-weight:bold">sed</span> <span style="color:#000000">-</span>i <span style="color:#bf0303">'/^Package: apt-transport-https$/aMulti-Arch: foreign'</span> debian<span style="color:#000000">/</span>control
 <span style="color:#838183; font-style:italic"># Increment the version in the changelog so that the original from the repo</span>
-<span style="color:#838183; font-style:italic"># wouldn&apos;t override the locally patched package next time you run apt upgrade</span>
-dch <span style="color:#0057ae">--local</span><span style="color:#000000">=</span><span style="color:#bf0303">&apos;multiarch&apos;</span> <span style="color:#bf0303">&quot;Mark the package as multi-arch foreign to satisfy skype dependencies&quot;</span>
+<span style="color:#838183; font-style:italic"># wouldn't override the locally patched package next time you run apt upgrade</span>
+dch <span style="color:#000000">--</span><span style="color:#0057ae">local</span><span style="color:#000000">=</span><span style="color:#bf0303">'multiarch'</span> <span style="color:#bf0303">&quot;Mark the package as multi-arch foreign to satisfy skype dependencies&quot;</span>
 <span style="color:#838183; font-style:italic"># dch will warn you that the current directory has been renamed,</span>
-<span style="color:#838183; font-style:italic"># so let&apos;s change into it to avoid confusion</span>
+<span style="color:#838183; font-style:italic"># so let's change into it to avoid confusion</span>
 <span style="color:#0057ae">cd</span> ..<span style="color:#000000">/</span>apt-<span style="color:#000000">*</span>
 <span style="color:#838183; font-style:italic"># Build the packages. ALL OF THEM!</span>
-dpkg-buildpackage <span style="color:#0057ae">-uc -us</span>
+dpkg-buildpackage <span style="color:#000000">-</span>uc <span style="color:#000000">-</span>us
 </pre>
 
 
@@ -887,7 +889,7 @@ dpkg-buildpackage <span style="color:#0057ae">-uc -us</span>
 
 
 <pre>
-dpkg <span style="color:#0057ae">-i</span> ..<span style="color:#000000">/</span>apt-transport-https<span style="color:#000000">*</span>.deb
+dpkg <span style="color:#000000">-</span>i ..<span style="color:#000000">/</span>apt-transport-https<span style="color:#000000">*</span>.deb
 </pre>
 
 
@@ -897,8 +899,8 @@ dpkg <span style="color:#0057ae">-i</span> ..<span style="color:#000000">/</span
 
 
 <pre>
-dpkg <span style="color:#0057ae">-i</span> ...<span style="color:#000000">/</span>path<span style="color:#000000">/</span>to<span style="color:#000000">/</span>skypeforlinux64.deb
-apt-get <span style="color:#000000; font-weight:bold">install</span> <span style="color:#0057ae">-f</span>
+dpkg <span style="color:#000000">-</span>i ...<span style="color:#000000">/</span>path<span style="color:#000000">/</span>to<span style="color:#000000">/</span>skypeforlinux64.deb
+apt-get <span style="color:#000000; font-weight:bold">install</span> <span style="color:#000000">-</span>f
 </pre>
 
 
@@ -990,21 +992,21 @@ apt-get <span style="color:#000000; font-weight:bold">install</span> <span style
 <pre>
 histeq<span style="color:#000000">.</span>palette <span style="color:#000000">&lt;-</span> <span style="color:#000000; font-weight:bold">function</span><span style="color:#000000">(</span>x<span style="color:#000000">,</span> pal<span style="color:#000000">,</span> max<span style="color:#000000">.</span>col<span style="color:#000000">=</span><span style="color:#b07e00">2048</span><span style="color:#000000">, ...) {</span>
 	<span style="color:#000000; font-weight:bold">function</span><span style="color:#000000">(</span>n<span style="color:#000000">) {</span>
-		<span style="color:#838183; font-style:italic"># palette is assumed to be linear; we&apos;re transforming its scale from linear to CDF-shaped</span>
+		<span style="color:#838183; font-style:italic"># palette is assumed to be linear; we're transforming its scale from linear to CDF-shaped</span>
 		grid <span style="color:#000000">&lt;-</span> <span style="color:#010181">seq</span><span style="color:#000000">(</span>from<span style="color:#000000">=</span><span style="color:#010181">min</span><span style="color:#000000">(</span>x<span style="color:#000000">),</span> to<span style="color:#000000">=</span><span style="color:#010181">max</span><span style="color:#000000">(</span>x<span style="color:#000000">),</span> length<span style="color:#000000">.</span>out<span style="color:#000000">=</span>n<span style="color:#000000">)</span>
 		coords <span style="color:#000000">&lt;-</span> <span style="color:#010181">ecdf</span><span style="color:#000000">(</span>x<span style="color:#000000">)(</span>grid<span style="color:#000000">)</span>
 
 		<span style="color:#838183; font-style:italic"># so, coords[zeroes+1] - coords[zeroes] == 0</span>
 		zeroes <span style="color:#000000">&lt;-</span> <span style="color:#010181">which</span><span style="color:#000000">(</span><span style="color:#010181">diff</span><span style="color:#000000">(</span>coords<span style="color:#000000">) ==</span> <span style="color:#b07e00">0</span><span style="color:#000000">)</span>
 		<span style="color:#838183; font-style:italic"># ECDF is right-continuous, so the last point is always bigger than second-to-last</span>
-		<span style="color:#838183; font-style:italic"># but we can still have problems at the first point, which we shouldn&apos;t try to extrapolate</span>
+		<span style="color:#838183; font-style:italic"># but we can still have problems at the first point, which we shouldn't try to extrapolate</span>
 		zeroes<span style="color:#000000">[</span>zeroes<span style="color:#000000">==</span><span style="color:#b07e00">1</span><span style="color:#000000">] &lt;-</span> <span style="color:#b07e00">2</span> <span style="color:#838183; font-style:italic"># if coords[2] == coords[1], interpolate second, not first</span>
 		<span style="color:#838183; font-style:italic"># replace points where diff=0 with linear interpolation</span>
 		coords<span style="color:#000000">[</span>zeroes<span style="color:#000000">] &lt;-</span> <span style="color:#010181">approx</span><span style="color:#000000">(</span>grid<span style="color:#000000">[-</span>zeroes<span style="color:#000000">],</span> coords<span style="color:#000000">[-</span>zeroes<span style="color:#000000">],</span> grid<span style="color:#000000">[</span>zeroes<span style="color:#000000">])</span>$y
 
 		<span style="color:#838183; font-style:italic"># now that every coordinate is different, we know how many colors to request</span>
 		<span style="color:#838183; font-style:italic"># so that every index would be different, too</span>
-		<span style="color:#838183; font-style:italic"># but don&apos;t request too many colours because they won&apos;t be unique anyway</span>
+		<span style="color:#838183; font-style:italic"># but don't request too many colours because they won't be unique anyway</span>
 		n<span style="color:#000000">.</span>pal <span style="color:#000000">&lt;-</span> <span style="color:#010181">ceiling</span><span style="color:#000000">(</span><span style="color:#010181">min</span><span style="color:#000000">(</span>max<span style="color:#000000">.</span>col<span style="color:#000000">,</span> <span style="color:#b07e00">1</span><span style="color:#000000">/</span><span style="color:#010181">min</span><span style="color:#000000">(</span><span style="color:#010181">diff</span><span style="color:#000000">(</span>coords<span style="color:#000000">))))</span>
 		<span style="color:#010181">pal</span><span style="color:#000000">(</span>n<span style="color:#000000">.</span>pal<span style="color:#000000">, ...)[</span><span style="color:#010181">round</span><span style="color:#000000">(</span><span style="color:#b07e00">1</span><span style="color:#000000">+</span>coords<span style="color:#000000">*(</span>n<span style="color:#000000">.</span>pal<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">))]</span>
 	<span style="color:#000000">}</span>

@@ -65,3 +65,5 @@ With a small exception to the depth-dependencies plot, what we observe here prob
 [sponge]https://cran.r-project.org/package=spongebob
 
 This is not to say that CRAN is "better" than NPM, or R is "better" than JavaScript. Certainly not: what works well for a small group of statisticians has no reason to work well for the much larger worldwide JavaScript community. If anything, CRAN is *not* without its own problems: despite the median package requiring only 5 total dependencies, heavy tails like "smartdata":https://cran.r-project.org/package=smartdata with 235 required dependencies skew the average towards 20 and the later quantiles towards 60. Tidyverse itself, with 86 total required dependencies, is above 95th quantile by that parameter, but is being heavily advertised as the solution for many things, and it shows as a group of outliers on some of the plots we can make.
+
+*See also*: "Zhang, Li, & Zhang (2023) (R Journal article)":https://journal.r-project.org/articles/RJ-2023-060/ give it a more thoughtful formal treatment but from a different perspective.
