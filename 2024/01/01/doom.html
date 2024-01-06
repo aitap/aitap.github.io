@@ -1,0 +1,313 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1"> <!-- stupid mobile browsers -->
+		<title>Doom plots</title>
+		<style>
+			body {
+				max-width: 42em;
+			}
+			.center {
+				text-align: center;
+				display: block;
+				margin-left: auto;
+				margin-right: auto;
+			}
+		</style>
+		<link href="/atom.xml" type="application/atom+xml" rel="alternate" title="Atom feed">
+	</head>
+	<body>
+		
+			<a href="/">&larr; Back to the index</a>
+		
+		<h1>Doom plots</h1>
+		<div class="content">
+			<p>There are lots of options for when you want to visualise a function surface in <a href="https://r-project.org/"><strong>R</strong></a>. Plain matrices can be drawn as false colour images using <a href="https://search.r-project.org/R/refmans/graphics/html/image.html"><code>image</code></a>; contours can be drawn around fixed levels (assuming a smooth function being tabulated) using <a href="https://search.r-project.org/R/refmans/graphics/html/contour.html"><code>contour</code></a> or <a href="https://search.r-project.org/R/refmans/graphics/html/filled.contour.html"><code>filled.contour</code></a>; a three-dimensional surface can be drawn using <a href="https://search.r-project.org/R/refmans/graphics/html/persp.html"><code>persp</code></a>. The <a href="https://CRAN.R-project.org/package=lattice"><strong>lattice</strong></a> package provides the same for long-format data in functions <a href="https://search.r-project.org/CRAN/refmans/lattice/html/levelplot.html"><code>contourplot</code>, <code>levelplot</code></a>, and <a href="https://search.r-project.org/CRAN/refmans/lattice/html/cloud.html"><code>wireframe</code></a>. Finally, the <a href="https://CRAN.R-project.org/package=rgl"><strong>rgl</strong></a> package brings real interactive 3D plots to R.</p>
+
+<p>Instead of using any of that, let's put the data one step closer to the user and make a Doom map out of it.</p>
+
+<h2>Prerequisites</h2>
+
+<p>In the original Doom 1 or 2, sloped floors just weren't possible at all, so we'll be using <a href="https://zdoom.org/">ZDoom</a>. A related engine like <a href="https://zandronum.com/">Zandronum</a> will also support enough of the feature we will be using.</p>
+
+<p>At this point, it is important to note that a Doom map consists, among other things, of <a href="https://doomwiki.org/wiki/WAD#Map_data_lumps">vertices, lines, sides, and sectors</a>. The <a href="https://doomwiki.org/wiki/Vertex">vertices</a> are points on the surface (with <code>x</code>, <code>y</code> coordinates). <a href="https://doomwiki.org/wiki/Linedef">Lines</a> go from one point to the other and have one or two sides, with the "front" side being positioned clockwise from the line. <a href="https://doomwiki.org/wiki/Sidedef">Sides</a> determine the wall textures (which we'll mostly ignore) and the facing <a href="https://doomwiki.org/wiki/Sector">sectors</a>, which finally determine the floor &amp; ceiling textures and heights:</p>
+
+<p><img src="mapstruct.svg" alt="Every line references two vertices, a start point and an end point. It also references two sides, a front and a back. Every side references a sector, which finally defines the heights and the textures."></p>
+
+<p>My original plan was to start with <a href="https://search.r-project.org/R/refmans/grDevices/html/contourLines.html"><code>contourLines</code></a> and make <code>LINEDEFS</code> of type <a href="https://doomwiki.org/wiki/Linedef_type">slope front floor</a> to align their heights. Unfortunately, most of the resulting sectors were not completely closed, making the editor "fix" the situation by adding more lines to join the first and the last vertex of every sector:</p>
+
+<p><img src="incomplete_sectors.png" alt="A screenshot of SLADE, a Doom editor, showing a mostly incomplete map. Quite a lot of the sectors do not have their contours fully defined, so the editor completes them by joining the first and the last vertex of each with an additional line. It's a mess." style="width:100%"></p>
+
+<p>It turned out to be easier to go with the <a href="https://zdoom.org/wiki/UDMF">universal Doom map format</a> (also known as <code>TEXTMAP</code>), which can store <a href="https://zdoom.org/wiki/Slope#UDMF">heights for individual vertices</a>, and what is a heightmap contained in a matrix (accompanied by an <code>x</code> and an <code>y</code> vector) if not an array of vertices arranged on a grid? One remaining detail is that the sectors surrounding the vertex with a specified height <strong>must</strong> be triangular. (It's possible to specify the height for any vertex, but the floor will remain flat if the sector is not triangular, or, say, consists of multiple triangles.)</p>
+
+<h2>Triangular sectors</h2>
+
+<p>Thankfully, splitting a rectangular grid into triangular sectors is no problem <del>and only took me three or four tries</del>. Every rectangle of the grid becomes two triangles:</p>
+
+<p><img src="sector.svg" alt="A diagram splitting a four points on a rectangular grid into two triangles, using a vertical line, a horizontal line and a diagonal line."></p>
+
+<p>Since the triangles, not the vertices determine the colour of the floor, we'll average the neighbouring points to get their values. From a matrix <code>z</code> of vertex heights, we're getting:</p>
+
+
+
+<pre>
+floors <span style="color:#000000">&lt;-</span> <span style="color:#010181">array</span><span style="color:#000000">(</span>
+	<span style="color:#010181">c</span><span style="color:#000000">(</span>
+		z<span style="color:#000000">[-</span><span style="color:#b07e00">1</span><span style="color:#000000">,-</span><span style="color:#b07e00">1</span><span style="color:#000000">] +</span> z<span style="color:#000000">[-</span><span style="color:#010181">nrow</span><span style="color:#000000">(</span>z<span style="color:#000000">),-</span><span style="color:#010181">ncol</span><span style="color:#000000">(</span>z<span style="color:#000000">)] +</span> z<span style="color:#000000">[-</span><span style="color:#b07e00">1</span><span style="color:#000000">,-</span><span style="color:#010181">ncol</span><span style="color:#000000">(</span>z<span style="color:#000000">)],</span>
+		z<span style="color:#000000">[-</span><span style="color:#b07e00">1</span><span style="color:#000000">,-</span><span style="color:#b07e00">1</span><span style="color:#000000">] +</span> z<span style="color:#000000">[-</span><span style="color:#010181">nrow</span><span style="color:#000000">(</span>z<span style="color:#000000">),-</span><span style="color:#010181">ncol</span><span style="color:#000000">(</span>z<span style="color:#000000">)] +</span> z<span style="color:#000000">[-</span><span style="color:#010181">nrow</span><span style="color:#000000">(</span>z<span style="color:#000000">),-</span><span style="color:#b07e00">1</span><span style="color:#000000">]</span>
+	<span style="color:#000000">) /</span> <span style="color:#b07e00">3</span><span style="color:#000000">,</span>
+	<span style="color:#010181">c</span><span style="color:#000000">(</span><span style="color:#010181">dim</span><span style="color:#000000">(</span>z<span style="color:#000000">)-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span> <span style="color:#b07e00">2</span><span style="color:#000000">)</span>
+<span style="color:#000000">)</span>
+</pre>
+
+
+
+
+<p>This is Doom, so instead of full-colour floors we are setting up a small, fixed number of textures, and using thresholds in the vector <code>levels</code> to determine the number of the corresponding texture:</p>
+
+
+
+<pre>
+texturenum <span style="color:#000000">&lt;-</span> <span style="color:#010181">array</span><span style="color:#000000">(</span><span style="color:#010181">findInterval</span><span style="color:#000000">(</span>floors<span style="color:#000000">,</span> levels<span style="color:#000000">),</span> <span style="color:#010181">dim</span><span style="color:#000000">(</span>floors<span style="color:#000000">))</span>
+</pre>
+
+
+
+<p>We then have to arrange to number the individual sectors:</p>
+
+
+
+<pre>
+sidx <span style="color:#000000">&lt;-</span> texturenum
+sidx<span style="color:#000000">[] &lt;-</span> <span style="color:#010181">seq_len</span><span style="color:#000000">(</span><span style="color:#010181">length</span><span style="color:#000000">(</span>sidx<span style="color:#000000">))</span>
+</pre>
+
+
+
+<p>Now for the vertices. We must list every combination of the coordinates provided to us in a pair of vectors <code>x</code>, <code>y</code> corresponding to rows and columns of the matrix <code>z</code>:</p>
+
+
+
+<pre>
+vertices <span style="color:#000000">&lt;-</span> data<span style="color:#000000">.</span><span style="color:#010181">frame</span><span style="color:#000000">(</span>
+	x <span style="color:#000000">=</span> x<span style="color:#000000">[</span><span style="color:#010181">row</span><span style="color:#000000">(</span>z<span style="color:#000000">)],</span>
+	y <span style="color:#000000">=</span> y<span style="color:#000000">[</span><span style="color:#010181">col</span><span style="color:#000000">(</span>z<span style="color:#000000">)],</span>
+	z <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>z<span style="color:#000000">)</span>
+<span style="color:#000000">)</span>
+</pre>
+
+
+
+<p>The choice of <code>x</code> corresponding to <em>rows</em> of <code>z</code> and <code>y</code> corresponding to <em>columns</em> of <code>z</code> may look counter-intuitive, but it matches what <code>image()</code> does with the coordinates.</p>
+
+<p>Since the lines reference the vertices by their numbers, we need to set up a way (the <code>vidx</code> matrix) to map from row and column numbers to the individual rows of the <code>vertices</code> data frame:</p>
+
+
+
+<pre>
+vidx <span style="color:#000000">&lt;-</span> z
+vidx<span style="color:#000000">[] &lt;-</span> <span style="color:#010181">seq_len</span><span style="color:#000000">(</span><span style="color:#010181">length</span><span style="color:#000000">(</span>z<span style="color:#000000">))</span>
+</pre>
+
+
+
+<p>Now let's construct the lines.</p>
+
+
+
+<pre>
+linedefs <span style="color:#000000">&lt;-</span> <span style="color:#010181">rbind</span><span style="color:#000000">(</span>
+</pre>
+
+
+
+<p>For a matrix with <code>N</code> rows (points in <code>x</code>) and <code>M</code> columns (points in <code>y</code>), we'll need <code>(N-1)*M</code> horizontal lines that would go from <code>(i, j)</code> to <code>(i+1, j)</code> for every applicable <code>(i, j)</code>. Their front (clockwise) sector would be the triangle <code>T(i,j-1,2)</code> (except for the lowest horizontal, which doesn't have a front side), and their back (counter-clockwise) sector would be <code>T(i,j,1)</code> (except for the topmost horizontal).</p>
+
+
+
+<pre>
+	data<span style="color:#000000">.</span><span style="color:#010181">frame</span><span style="color:#000000">(</span>
+		start <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>vidx<span style="color:#000000">[-</span><span style="color:#010181">nrow</span><span style="color:#000000">(</span>z<span style="color:#000000">),]),</span>
+		end   <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>vidx<span style="color:#000000">[-</span><span style="color:#b07e00">1</span><span style="color:#000000">,]),</span>
+		front <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span><span style="color:#010181">cbind</span><span style="color:#000000">(</span><span style="color:#0057ae">NA</span><span style="color:#000000">,</span> sidx<span style="color:#000000">[,,</span><span style="color:#b07e00">2</span><span style="color:#000000">])),</span>
+		back  <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span><span style="color:#010181">cbind</span><span style="color:#000000">(</span>sidx<span style="color:#000000">[,,</span><span style="color:#b07e00">1</span><span style="color:#000000">],</span> <span style="color:#0057ae">NA</span><span style="color:#000000">))</span>
+	<span style="color:#000000">),</span>
+</pre>
+
+
+
+<p>In a similar manner, we get <code>N*(M-1)</code> verticals with fronts at <code>T(i,j,2)</code> and backs at <code>T(i-1,j,1)</code>:</p>
+
+
+
+<pre>
+	data<span style="color:#000000">.</span><span style="color:#010181">frame</span><span style="color:#000000">(</span>
+		start <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>vidx<span style="color:#000000">[,-</span><span style="color:#010181">ncol</span><span style="color:#000000">(</span>z<span style="color:#000000">)]),</span>
+		end   <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>vidx<span style="color:#000000">[,-</span><span style="color:#b07e00">1</span><span style="color:#000000">]),</span>
+		front <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span><span style="color:#010181">rbind</span><span style="color:#000000">(</span>sidx<span style="color:#000000">[,,</span><span style="color:#b07e00">2</span><span style="color:#000000">],</span> <span style="color:#0057ae">NA</span><span style="color:#000000">)),</span>
+		back  <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span><span style="color:#010181">rbind</span><span style="color:#000000">(</span><span style="color:#0057ae">NA</span><span style="color:#000000">,</span> sidx<span style="color:#000000">[,,</span><span style="color:#b07e00">1</span><span style="color:#000000">]))</span>
+	<span style="color:#000000">),</span>
+</pre>
+
+
+
+<p>Finally, we add the <code>(N-1)*(M-1)</code> diagonals with fronts and backs at <code>T(i,j,1)</code> and <code>T(i,j,2)</code>, respectively:</p>
+
+
+
+<pre>
+	data<span style="color:#000000">.</span><span style="color:#010181">frame</span><span style="color:#000000">(</span>
+		start <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>vidx<span style="color:#000000">[-</span><span style="color:#010181">nrow</span><span style="color:#000000">(</span>z<span style="color:#000000">),-</span><span style="color:#010181">ncol</span><span style="color:#000000">(</span>z<span style="color:#000000">)]),</span>
+		end   <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>vidx<span style="color:#000000">[-</span><span style="color:#b07e00">1</span><span style="color:#000000">,-</span><span style="color:#b07e00">1</span><span style="color:#000000">]),</span>
+		front <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>sidx<span style="color:#000000">[,,</span><span style="color:#b07e00">1</span><span style="color:#000000">]),</span>
+		back  <span style="color:#000000">=</span> as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>sidx<span style="color:#000000">[,,</span><span style="color:#b07e00">2</span><span style="color:#000000">])</span>
+	<span style="color:#000000">)</span>
+<span style="color:#000000">)</span>
+</pre>
+
+
+
+<p>Are we done? Almost.</p>
+
+<p>For some reason, <a href="https://slade.mancubus.net/">SLADE</a> seems to ignore the lines with a back side but no front side, so we have to flip those lines around:</p>
+
+
+
+<pre>
+linedefs <span style="color:#000000">&lt;-</span> <span style="color:#010181">within</span><span style="color:#000000">(</span>linedefs<span style="color:#000000">, {</span>
+	flip <span style="color:#000000">&lt;-</span> is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>front<span style="color:#000000">) &amp; !</span>is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>back<span style="color:#000000">)</span>
+
+	tmp <span style="color:#000000">&lt;-</span> start<span style="color:#000000">[</span>flip<span style="color:#000000">]</span>
+	start<span style="color:#000000">[</span>flip<span style="color:#000000">] &lt;-</span> end<span style="color:#000000">[</span>flip<span style="color:#000000">]</span>
+	end<span style="color:#000000">[</span>flip<span style="color:#000000">] &lt;-</span> tmp
+
+	tmp <span style="color:#000000">&lt;-</span> front<span style="color:#000000">[</span>flip<span style="color:#000000">]</span>
+	front<span style="color:#000000">[</span>flip<span style="color:#000000">] &lt;-</span> back<span style="color:#000000">[</span>flip<span style="color:#000000">]</span>
+	back<span style="color:#000000">[</span>flip<span style="color:#000000">] &lt;-</span> tmp
+
+	<span style="color:#010181">rm</span><span style="color:#000000">(</span>tmp<span style="color:#000000">,</span> flip<span style="color:#000000">)</span>
+<span style="color:#000000">})</span>
+</pre>
+
+
+
+<p>Finally, we can write the <code>TEXTMAP</code> chunk:</p>
+
+
+
+<pre>
+<span style="color:#010181">writeLines</span><span style="color:#000000">(</span><span style="color:#010181">c</span><span style="color:#000000">(</span>
+	<span style="color:#bf0303">'namespace = &quot;zdoom&quot;;'</span><span style="color:#000000">,</span>
+	<span style="color:#010181">paste0</span><span style="color:#000000">(</span>
+		<span style="color:#bf0303">'vertex</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'{</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+</pre>
+
+
+
+<p>UDMF coordinates should be integer-valued. The original format used C variables of type <code>short</code>, which (as expected) corresponded to 16-bit two's complement signed integers.</p>
+
+
+
+<pre>
+		<span style="color:#bf0303">'x = '</span><span style="color:#000000">,</span><span style="color:#010181">round</span><span style="color:#000000">(</span>vertices$x<span style="color:#000000">),</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'y = '</span><span style="color:#000000">,</span><span style="color:#010181">round</span><span style="color:#000000">(</span>vertices$y<span style="color:#000000">),</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+</pre>
+
+
+
+<p>128 units is just enough for a ceiling.</p>
+
+
+
+<pre>
+		<span style="color:#bf0303">'zceiling = '</span><span style="color:#000000">,</span><span style="color:#010181">round</span><span style="color:#000000">(</span><span style="color:#010181">max</span><span style="color:#000000">(</span>vertices$z<span style="color:#000000">)+</span><span style="color:#b07e00">128</span><span style="color:#000000">),</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'zfloor = '</span><span style="color:#000000">,</span><span style="color:#010181">round</span><span style="color:#000000">(</span>vertices$z<span style="color:#000000">),</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'}</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span>
+	<span style="color:#000000">),</span>
+	<span style="color:#010181">paste0</span><span style="color:#000000">(</span>
+		<span style="color:#bf0303">'linedef</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'{</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+</pre>
+
+
+
+<p>Doom indexes everything from <code>0</code> unlike R, which is why we have to subtract 1 here.</p>
+
+
+
+<pre>
+		<span style="color:#bf0303">'v1 = '</span><span style="color:#000000">,</span>linedefs$start<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'v2 = '</span><span style="color:#000000">,</span>linedefs$end<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#000000; font-weight:bold">ifelse</span><span style="color:#000000">(</span>
+			is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>linedefs$front<span style="color:#000000">),</span> <span style="color:#bf0303">''</span><span style="color:#000000">,</span>
+			<span style="color:#010181">paste0</span><span style="color:#000000">(</span><span style="color:#bf0303">'sidefront = '</span><span style="color:#000000">,</span>linedefs$front<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">)</span>
+		<span style="color:#000000">),</span>
+		<span style="color:#000000; font-weight:bold">ifelse</span><span style="color:#000000">(</span>
+			is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>linedefs$back<span style="color:#000000">),</span> <span style="color:#bf0303">''</span><span style="color:#000000">,</span>
+			<span style="color:#010181">paste0</span><span style="color:#000000">(</span><span style="color:#bf0303">'sideback = '</span><span style="color:#000000">,</span>linedefs$back<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">)</span>
+		<span style="color:#000000">),</span>
+</pre>
+
+
+
+<p>One-sided lines are supposed to happen on the boundaries of the map. <code>special = 9</code> corresponds to <a href="https://zdoom.org/wiki/Line_Horizon">Line_Horizon</a>, replacing the wall texture with the floor texture stretching to infinity (and covered with the skybox):</p>
+
+
+
+<pre>
+		<span style="color:#000000; font-weight:bold">ifelse</span><span style="color:#000000">(</span>
+			is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>linedefs$front<span style="color:#000000">)</span> | is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>linedefs$back<span style="color:#000000">),</span>
+			<span style="color:#bf0303">'blocking = true;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">special = 9;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span> <span style="color:#bf0303">'twosided = true;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span>
+		<span style="color:#000000">),</span>
+		<span style="color:#bf0303">'}</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span>
+	<span style="color:#000000">),</span>
+</pre>
+
+
+
+<p>Every side in our map corresponds to an individual sector (which also helps us ignore wall textures).</p>
+
+
+
+<pre>
+	<span style="color:#010181">paste0</span><span style="color:#000000">(</span>
+		<span style="color:#bf0303">'sidedef</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'{</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'sector = '</span><span style="color:#000000">,</span>as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>sidx<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">),</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'}</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span>
+	<span style="color:#000000">),</span>
+</pre>
+
+
+
+<p>Finally, from a character vector <code>textures</code> containing texture names (one more than the thresholds in <code>levels</code>) we construct the definitions of every sector referenced by the side definitions:</p>
+
+
+
+<pre>
+	<span style="color:#010181">paste0</span><span style="color:#000000">(</span>
+		<span style="color:#bf0303">'sector</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'{</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'texturefloor = &quot;'</span><span style="color:#000000">,</span>as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>textures<span style="color:#000000">[</span>texturenum<span style="color:#000000">+</span><span style="color:#b07e00">1</span><span style="color:#000000">]),</span><span style="color:#bf0303">'&quot;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'textureceiling = &quot;F_SKY1&quot;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">'}</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span>
+	<span style="color:#000000">)</span>
+<span style="color:#000000">),</span> <span style="color:#bf0303">'TEXTMAP'</span><span style="color:#000000">)</span>
+</pre>
+
+
+
+<p>Does it work? Let's try with <code>x &lt;- seq_len(nrow(volcano)) * 32</code>, <code>y &lt;- seq_len(ncol(volcano)) * 32</code>, <code>z &lt;- volcano * 2</code> and <code>textures &lt;- sprintf('TER%02d', 1:16)</code> corresponding to <code>hcl.colors(16, 'Terrain2')</code> (which we'll have to generate manually as an exercise for the reader). For <code>levels</code>, we'll use 15 points inside the range of <code>z</code>: <code>seq(min(z), max(z), length.out = 17)[2:16]</code>.</p>
+
+<p>After a few manual passes in SLADE (to add the player spawn point), <a href="./volcano.pk3">it works</a>:</p>
+
+<p><img src="doomcano.png" alt="" style="width:100%"></p>
+
+<p>Download the <a href="./img2doom.R">R script</a> and try it yourself!</p>
+		</div>
+		<hr>
+		Unless otherwise specified, contents of this blog are covered by <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> license (or a later version).
+	</body>
+</html>

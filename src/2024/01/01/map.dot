@@ -1,0 +1,41 @@
+digraph G {
+	compound=true
+	graph [fontname = "serif"]
+	node  [fontname = "serif"]
+	edge  [fontname = "serif"]
+
+	vertex [
+		label=<<table>
+			<tr><td colspan="2"><b>Vertex</b></td></tr>
+			<tr><td>x</td><td>y</td></tr>
+		</table>>
+		shape=plaintext
+	]
+
+	sector [
+		label=<<table>
+			<tr><td><b>Sector</b></td></tr>
+			<tr><td>Floor, ceiling heights</td></tr>
+			<tr><td>Flat textures</td></tr>
+		</table>>
+		shape=plaintext
+	]
+
+	subgraph cluster_side {
+		label=<<b>Side</b>>
+		node [shape=box]
+		si_sector [ label="Facing sector" ]
+	}
+	si_sector -> sector
+
+	subgraph cluster_line {
+		label=<<b>Line</b>>
+		node [shape=box]
+		l_start [ label="start" ]
+		l_end [ label="end" ]
+		l_front [ label="front" ]
+		l_back [ label="back" ]
+	}
+	{ l_start l_end } -> vertex;
+	{ l_front l_back } -> si_sector [lhead=cluster_side];
+}

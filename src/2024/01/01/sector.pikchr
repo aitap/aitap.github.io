@@ -1,0 +1,19 @@
+P11: dot "" "(i, j)" ljust
+right; move 5cm;
+P21: dot "" "(i+1, j)" ljust
+up; move 3cm;
+P22: dot "(i+1, j+1)" ljust ""
+left; move 5cm;
+P12: dot "(i, j+1)" ljust ""
+
+arrow from P11 + (0, -.75cm) to P11 + (4cm, -.75cm) "" "x axis"
+arrow from P11 + (-.75cm, 0) to P11 + (-.75cm, 2.5cm) "y axis" aligned ""
+
+arrow thin from P11 to P12 "" "vertical" aligned
+arrow thin from P11 to P21 "horizontal" aligned ""
+arrow thin from P11 to P22 "diagonal" aligned ""
+line dashed thin from P22 to P12
+line dashed thin from P22 to P21
+
+"T(i,j,1)" big at ((P11.x+P21.x+P22.x)/3, (P11.y + P21.y + P22.y)/3)
+"T(i,j,2)" big at ((P11.x+P12.x+P22.x)/3, (P11.y + P12.y + P22.y)/3)
