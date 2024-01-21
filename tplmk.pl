@@ -60,7 +60,7 @@ sub process_template ($path,$force=0) {
 		my $tpl = Template::->new({
 			VARIABLES => {
 				process_template => \&process_template,
-				all_src => \@src,
+				all_src => [ grep { $_->{date} } @src ],
 				self => $path, # in case you're interested
 			},
 			EVAL_PERL => 1,
