@@ -198,10 +198,10 @@ linedefs <span style="color:#000000">&lt;-</span> <span style="color:#010181">wi
 
 <pre>
 <span style="color:#010181">writeLines</span><span style="color:#000000">(</span><span style="color:#010181">c</span><span style="color:#000000">(</span>
-	<span style="color:#bf0303">'namespace = &quot;zdoom&quot;;'</span><span style="color:#000000">,</span>
+	<span style="color:#bf0303">&apos;namespace = &quot;zdoom&quot;;&apos;</span><span style="color:#000000">,</span>
 	<span style="color:#010181">paste0</span><span style="color:#000000">(</span>
-		<span style="color:#bf0303">'vertex</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'{</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;vertex</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;{</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
 </pre>
 
 
@@ -211,8 +211,8 @@ linedefs <span style="color:#000000">&lt;-</span> <span style="color:#010181">wi
 
 
 <pre>
-		<span style="color:#bf0303">'x = '</span><span style="color:#000000">,</span><span style="color:#010181">round</span><span style="color:#000000">(</span>vertices$x<span style="color:#000000">),</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'y = '</span><span style="color:#000000">,</span><span style="color:#010181">round</span><span style="color:#000000">(</span>vertices$y<span style="color:#000000">),</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;x = &apos;</span><span style="color:#000000">,</span><span style="color:#010181">round</span><span style="color:#000000">(</span>vertices$x<span style="color:#000000">),</span><span style="color:#bf0303">&apos;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;y = &apos;</span><span style="color:#000000">,</span><span style="color:#010181">round</span><span style="color:#000000">(</span>vertices$y<span style="color:#000000">),</span><span style="color:#bf0303">&apos;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
 </pre>
 
 
@@ -222,13 +222,13 @@ linedefs <span style="color:#000000">&lt;-</span> <span style="color:#010181">wi
 
 
 <pre>
-		<span style="color:#bf0303">'zceiling = '</span><span style="color:#000000">,</span><span style="color:#010181">round</span><span style="color:#000000">(</span><span style="color:#010181">max</span><span style="color:#000000">(</span>vertices$z<span style="color:#000000">)+</span><span style="color:#b07e00">128</span><span style="color:#000000">),</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'zfloor = '</span><span style="color:#000000">,</span><span style="color:#010181">round</span><span style="color:#000000">(</span>vertices$z<span style="color:#000000">),</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'}</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span>
+		<span style="color:#bf0303">&apos;zceiling = &apos;</span><span style="color:#000000">,</span><span style="color:#010181">round</span><span style="color:#000000">(</span><span style="color:#010181">max</span><span style="color:#000000">(</span>vertices$z<span style="color:#000000">)+</span><span style="color:#b07e00">128</span><span style="color:#000000">),</span><span style="color:#bf0303">&apos;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;zfloor = &apos;</span><span style="color:#000000">,</span><span style="color:#010181">round</span><span style="color:#000000">(</span>vertices$z<span style="color:#000000">),</span><span style="color:#bf0303">&apos;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;}</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span>
 	<span style="color:#000000">),</span>
 	<span style="color:#010181">paste0</span><span style="color:#000000">(</span>
-		<span style="color:#bf0303">'linedef</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'{</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;linedef</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;{</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
 </pre>
 
 
@@ -238,15 +238,15 @@ linedefs <span style="color:#000000">&lt;-</span> <span style="color:#010181">wi
 
 
 <pre>
-		<span style="color:#bf0303">'v1 = '</span><span style="color:#000000">,</span>linedefs$start<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'v2 = '</span><span style="color:#000000">,</span>linedefs$end<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;v1 = &apos;</span><span style="color:#000000">,</span>linedefs$start<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span><span style="color:#bf0303">&apos;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;v2 = &apos;</span><span style="color:#000000">,</span>linedefs$end<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span><span style="color:#bf0303">&apos;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
 		<span style="color:#000000; font-weight:bold">ifelse</span><span style="color:#000000">(</span>
-			is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>linedefs$front<span style="color:#000000">),</span> <span style="color:#bf0303">''</span><span style="color:#000000">,</span>
-			<span style="color:#010181">paste0</span><span style="color:#000000">(</span><span style="color:#bf0303">'sidefront = '</span><span style="color:#000000">,</span>linedefs$front<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">)</span>
+			is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>linedefs$front<span style="color:#000000">),</span> <span style="color:#bf0303">&apos;&apos;</span><span style="color:#000000">,</span>
+			<span style="color:#010181">paste0</span><span style="color:#000000">(</span><span style="color:#bf0303">&apos;sidefront = &apos;</span><span style="color:#000000">,</span>linedefs$front<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span><span style="color:#bf0303">&apos;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">)</span>
 		<span style="color:#000000">),</span>
 		<span style="color:#000000; font-weight:bold">ifelse</span><span style="color:#000000">(</span>
-			is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>linedefs$back<span style="color:#000000">),</span> <span style="color:#bf0303">''</span><span style="color:#000000">,</span>
-			<span style="color:#010181">paste0</span><span style="color:#000000">(</span><span style="color:#bf0303">'sideback = '</span><span style="color:#000000">,</span>linedefs$back<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">)</span>
+			is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>linedefs$back<span style="color:#000000">),</span> <span style="color:#bf0303">&apos;&apos;</span><span style="color:#000000">,</span>
+			<span style="color:#010181">paste0</span><span style="color:#000000">(</span><span style="color:#bf0303">&apos;sideback = &apos;</span><span style="color:#000000">,</span>linedefs$back<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">,</span><span style="color:#bf0303">&apos;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">)</span>
 		<span style="color:#000000">),</span>
 </pre>
 
@@ -258,10 +258,10 @@ linedefs <span style="color:#000000">&lt;-</span> <span style="color:#010181">wi
 
 <pre>
 		<span style="color:#000000; font-weight:bold">ifelse</span><span style="color:#000000">(</span>
-			is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>linedefs$front<span style="color:#000000">)</span> | is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>linedefs$back<span style="color:#000000">),</span>
-			<span style="color:#bf0303">'blocking = true;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">special = 9;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span> <span style="color:#bf0303">'twosided = true;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span>
+			is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>linedefs$front<span style="color:#000000">) |</span> is<span style="color:#000000">.</span><span style="color:#010181">na</span><span style="color:#000000">(</span>linedefs$back<span style="color:#000000">),</span>
+			<span style="color:#bf0303">&apos;blocking = true;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">special = 9;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span> <span style="color:#bf0303">&apos;twosided = true;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span>
 		<span style="color:#000000">),</span>
-		<span style="color:#bf0303">'}</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span>
+		<span style="color:#bf0303">&apos;}</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span>
 	<span style="color:#000000">),</span>
 </pre>
 
@@ -273,10 +273,10 @@ linedefs <span style="color:#000000">&lt;-</span> <span style="color:#010181">wi
 
 <pre>
 	<span style="color:#010181">paste0</span><span style="color:#000000">(</span>
-		<span style="color:#bf0303">'sidedef</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'{</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'sector = '</span><span style="color:#000000">,</span>as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>sidx<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">),</span><span style="color:#bf0303">';</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'}</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span>
+		<span style="color:#bf0303">&apos;sidedef</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;{</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;sector = &apos;</span><span style="color:#000000">,</span>as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>sidx<span style="color:#000000">-</span><span style="color:#b07e00">1</span><span style="color:#000000">),</span><span style="color:#bf0303">&apos;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;}</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span>
 	<span style="color:#000000">),</span>
 </pre>
 
@@ -288,16 +288,22 @@ linedefs <span style="color:#000000">&lt;-</span> <span style="color:#010181">wi
 
 <pre>
 	<span style="color:#010181">paste0</span><span style="color:#000000">(</span>
-		<span style="color:#bf0303">'sector</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'{</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'texturefloor = &quot;'</span><span style="color:#000000">,</span>as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>textures<span style="color:#000000">[</span>texturenum<span style="color:#000000">+</span><span style="color:#b07e00">1</span><span style="color:#000000">]),</span><span style="color:#bf0303">'&quot;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'textureceiling = &quot;F_SKY1&quot;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span><span style="color:#000000">,</span>
-		<span style="color:#bf0303">'}</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">'</span>
+		<span style="color:#bf0303">&apos;sector</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;{</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;texturefloor = &quot;&apos;</span><span style="color:#000000">,</span>as<span style="color:#000000">.</span><span style="color:#010181">vector</span><span style="color:#000000">(</span>textures<span style="color:#000000">[</span>texturenum<span style="color:#000000">+</span><span style="color:#b07e00">1</span><span style="color:#000000">]),</span><span style="color:#bf0303">&apos;&quot;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;textureceiling = &quot;F_SKY1&quot;;</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">,</span>
+		<span style="color:#bf0303">&apos;}</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span>
 	<span style="color:#000000">)</span>
-<span style="color:#000000">),</span> <span style="color:#bf0303">'TEXTMAP'</span><span style="color:#000000">)</span>
+<span style="color:#000000">),</span> <span style="color:#bf0303">&apos;TEXTMAP&apos;</span><span style="color:#000000">)</span>
 </pre>
 
 
+
+<p><hr></p>
+
+<p><b>Ad break!</b> My good friend Kate (MSc in molecular biology, R- and Python-curious) is <a href="./Kate.pdf">looking for a job</a> in EU or UK (currently based in Jena, DE). Please feel free to shoot her an e-mail and thank you for reading this far!</p>
+
+<p><hr></p>
 
 <p>Does it work? Let's try with <code>x &lt;- seq_len(nrow(volcano)) * 32</code>, <code>y &lt;- seq_len(ncol(volcano)) * 32</code>, <code>z &lt;- volcano * 2</code> and <code>textures &lt;- sprintf('TER%02d', 1:16)</code> corresponding to <code>hcl.colors(16, 'Terrain2')</code> (which we'll have to generate manually as an exercise for the reader). For <code>levels</code>, we'll use 15 points inside the range of <code>z</code>: <code>seq(min(z), max(z), length.out = 17)[2:16]</code>.</p>
 

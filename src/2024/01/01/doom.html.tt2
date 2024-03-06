@@ -213,6 +213,12 @@ Finally, from a character vector @textures@ containing texture names (one more t
 ), 'TEXTMAP')
 [% END %]
 
+<hr>
+
+**Ad break!** My good friend Kate (MSc in molecular biology, R- and Python-curious) is "looking for a job":./Kate.pdf in EU or UK (currently based in Jena, DE). Please feel free to shoot her an e-mail and thank you for reading this far!
+
+<hr>
+
 Does it work? Let's try with @x <- seq_len(nrow(volcano)) * 32@, @y <- seq_len(ncol(volcano)) * 32@, @z <- volcano * 2@ and @textures <- sprintf('TER%02d', 1:16)@ corresponding to @hcl.colors(16, 'Terrain2')@ (which we'll have to generate manually as an exercise for the reader). For @levels@, we'll use 15 points inside the range of @z@: @seq(min(z), max(z), length.out = 17)[2:16]@.
 
 After a few manual passes in SLADE (to add the player spawn point), "it works":./volcano.pk3:
