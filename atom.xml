@@ -9,6 +9,78 @@
 		<email>krylov.r00t@gmail.com</email>
 	</author>
 <entry>
+			<title>Everything you never wanted to know about the R vulnerability</title>
+			<link href="https://aitap.github.io/2024/05/02/unserialize.html" />
+			<id>https://aitap.github.io/2024/05/02/unserialize.html</id> <!-- unique enough -->
+			<updated>2024-05-02T00:00:00Z</updated>
+			<content type="xhtml">
+				<div xmlns="http://www.w3.org/1999/xhtml"><h2>...but shouldn't be afraid to ask</h2>
+
+<p>Recently, a lot of sources who ought to know better, including <a href="https://www.theregister.com/2024/05/01/r_programming_language_ace_vuln/">major news outlets</a>, have been saying that an <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-27322">arbitrary code execution vulnerability</a> has been patched in R-4.4.0, so everyone should upgrade to be safe from it. They are wrong on all three counts: this is R working as designed, not a vulnerability; the patch barely changes the behaviour but keeps similar attacks possible; and upgrading to R-4.4.0 will not save you from anything except very specific kinds of attack that haven't been observed in the wild.</p>
+
+<p>In fact, <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-27322"><span class="caps">CVE</span>-2024-27322</a> is just the tip of the iceberg. There are many possible ways to cause code execution using a serialized R data stream, and most of them will not go away without breaking fundamental parts of R itself:</p>
+
+
+
+<img src="iceberg.svg" style="width:100%" alt="A drawing of an iceberg with various kinds of RDS attacks named around it. On the tip is `promise &lt;- readRDS(...)`. Above the surface are `save(promise, eval.promises = FALSE)` and `save(.Last.sys)`. Down from the surface we see `lm(y ~ pwn_system(X)`, `delayedAssign(assign = environment(formula))`, fake srcref, corrupt bytecode, corrupt ALTREP state, and at the bottom, malformed data stream." />
+
+
+
+<p style="text-align:right;font-size:xx-small;">Thanks to <a href="https://openclipart.org/detail/299871/tip-of-the-iceberg">Openclipart</a> for the iceberg.</p>
+
+<p>Read on for exposition, or skip to <a href="#subset">plain old data</a> to find out how to protect yourself.</p>
+
+<p><hr /></p>
+
+<p><b>Ad break!</b> My <a href="https://www.linkedin.com/in/ekaterina-zhevelyuk-b3657a29a">good friend Kate</a> (MSc in molecular biology, R-basics and Python-curious) is <a href="../../01/01/Kate.pdf">looking for a job</a> in EU or UK (currently based in Jena, DE). Feel free to serialize her an e-mail!</p>
+
+<p><hr /></p>
+
+<h2>Timeō Danaōs et dōna <code>*.rds</code></h2>
+
+<p>The crux of the matter is that the <code>*.rds</code> and <code>*.RData</code> files that we so conveniently produce and consume using <code>save()</code>, <code>load()</code>, <code>saveRDS()</code>, and <code>readRDS()</code> directly represent internal state of R objects. The code processing these objects has no other option but to trust this state. When you load an object, there is no other source of truth about its contents except the file.</p>
+
+<p>The other part of the problem is that this internal state of R objects regularly contains executable code. For example, a model object will most likely contain an executable expression that accesses the data frame with the variables and produces a model matrix for the linear algebra library to perform linear least squares with. An attacker who wants to take over your computer using a serialized R file needn't bother with promises. It is much easier to replace the model expression with <code>pwn_your_machine()</code> and send the model to you to "test".</p>
+
+<p>What's worse, the above was just one example of "trusting internal state". With the power to create variables with arbitrary contents, the possibilities are endless. How about <a href="https://svn.r-project.org/R/branches/ALTREP/ALTREP.html"><span class="caps">ALTREP</span></a> objects confused about their internal state, so that they would overwrite arbitrary process memory, thinking it belongs to them? How about functions that look benign because they have nice <a href="https://search.r-project.org/R/refmans/base/html/srcfile.html">source references</a> and a completely inoffensive <a href="https://search.r-project.org/R/refmans/base/html/body.html">body</a>, but wreak havoc on your computer when executed (because their bytecode is grafted from <code>pwn_your_machine()</code>)?</p>
+
+<p>We cannot even completely get rid of promises in serialized data streams. R uses lazy evaluation for function arguments: what this means that every function argument is a promise that is not evaluated until the function asks for it. These promises may be captured by closures (which happens when a function creates and returns another function), and functions may be serialized and stored together with their promises. Evaluate the promises on serialization, and you <a href="https://stat.ethz.ch/pipermail/r-help/2024-March/479031.html">break the semantics of lazily-evaluated function arguments</a>. Function arguments that were meant for non-standard evaluation suddenly get forced; side effects happen when they weren't expected to.</p>
+
+<h2>Anatomy of a vulnerability</h2>
+
+<p>A real arbitrary code execution vulnerability would execute some code that R is not intended to execute in the first place. For example, <code>readRDS()</code> is not intended to execute native compiled code stored inside the file as it is reading it. (For that, the documented interface is <code>dyn.load()</code>.) In order to discover one of those, the attacker would have to open <a href="https://svn.r-project.org/R/trunk/src/main/serialize.c">src/main/serialize.c</a>, find a place where the program breaks the C safety rules by <a href="https://owasp.org/www-community/vulnerabilities/Buffer_Overflow">overrunning a buffer</a> (or <a href="https://owasp.org/www-community/vulnerabilities/Using_freed_memory">using a pointer after <code>free()</code></a>, or some other way) and arrange the data stream in such a contorted way that <code>readRDS()</code> with this mistake in it would confuse itself into jumping inside the provided <a href="https://en.wikipedia.org/wiki/Shellcode">shellcode</a> instead of returning back to R.</p>
+
+<p>This is incredibly hard work, and in the last decades it's been made harder by <a href="https://en.wikipedia.org/wiki/64-bit">larger address spaces</a>, <a href="https://en.wikipedia.org/wiki/ASLR">randomised memory layouts</a>, <a href="https://en.wikipedia.org/wiki/NX_bit">separation of code and data</a>, and so on. The authors of the <span class="caps">CVE </span>instead chose to describe R mostly working as intended as a vulnerability.</p>
+
+<p>Their writeup also says that this vulnerability can be used to inject malicious payloads into installed R packages. I cannot emphasize enough that having write access to R packages installed in a library <a href="https://devblogs.microsoft.com/oldnewthing/20060508-22/?p=31283">rather involves being on the other side of the airtight hatchway</a>. Inject promises and earn extra style points if you want to, but there's nothing preventing you from editing the <code>*.rdb</code> and <code>*.rdx</code> files any other way you can see fit, or replacing their contents altogether with an <code>EvilPackage</code> of your writing. No need for unevaluated promises.</p>
+
+<p>I hope this illustrates why this <span class="caps">CVE </span>is less of a good-faith bug report and more an attempt by a certain company that starts with Hidden and ends with Layer to get some cheap <span class="caps">PR.</span> But bad <span class="caps">CVE</span>s are <a href="https://sqlite.org/cves.html#about_cves">nothing new</a>; they are more or less equivalent to the <a href="../../01/21/open-access.html">torrent of low-quality papers</a> that we in academia have been dealing with for a long while.</p>
+
+<h2 id="subset">Storing plain old data</h2>
+
+<p>This isn't a novel problem. For example, Python has a similar data serialization module called <a href="https://docs.python.org/3/library/pickle.html"><code>pickle</code></a> with similar arbitrary execution problems. In order to exchange data safely, Python practitioners can instead use the <a href="https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html"><span class="caps">NPY </span>format</a>, which is designed to store simple, non-executable data, but can also store pickles of more complicated objects if needed.</p>
+
+<p>We don't <em>have</em> to use a new format, especially one that would require us to <a href="https://numpy.org/doc/stable/reference/generated/numpy.dtype.html">produce and parse <code>dtype</code> description strings</a>. There is just enough features in <span class="caps">RDS </span>format itself if we abstain from storing and reading vulnerable objects with executable code inside.</p>
+
+<p>How would that work? R variables must have one of a fixed set of <a href="https://cran.r-project.org/doc/manuals/R-ints.html#SEXPTYPEs">type codes</a>. If you follow the link, you will see some of the types correspond to just numbers (e.g. 10, 13-15: logical, integer, real, complex vectors), while other correspond to executable code (e.g. 3, "closures", which are most functions from the point of view of R). A special data-only unserializer would only allow the plain data types through and reject anything executable. No promises, no functions, no bytecode - no problem.</p>
+
+<p>It's also very important to avoid vulnerabilities while reading the serialized data. R is written in C, which is not a "memory-safe" language. With direct access to memory comes great responsibility. A careless C program can be tricked into overwriting unintended parts of memory or giving control to unintended code. <a href="https://bugs.r-project.org/show_bug.cgi?id=17578">Bugs</a> <a href="https://bugs.r-project.org/show_bug.cgi?id=18657">happen</a>. The easiest way to avoid the problem would be to write this unserializer in R.</p>
+
+<p>What is the cost of this approach? An unserializer written for robustness instead of speed will be slow. Only very simple variables and objects would be allowed to be stored: vectors, arrays, matrices, maybe environments. But a fitted model with code inside cannot be unserialized safely. And if you're thinking of <a href="https://search.r-project.org/R/refmans/base/html/deparse.html">deparsing</a> the code into a string and then calling <code>eval(parse(text = ...))</code> on it when you load it again, that would bring you back to square one.</p>
+
+<p>At the time of writing this, I cannot show you a complete product yet: <a href="https://codeberg.org/aitap/unserializeData"><code>unserializeData</code></a> is intended to be an R package, maybe published on <span class="caps">CRAN </span>if there is interest, but for now it can only correctly decode very simple data structures. Meanwhile, the regular <code>unserialize()</code>, <code>readRDS()</code> and <code>load()</code> should only be used for data you trust. They were never meant to be a security boundary against untrusted data.</p>
+
+<p>Failing that, we'll always have tab-separated text files. <a href="https://owasp.org/www-community/attacks/CSV_Injection">Those are safe, right?</a></p>
+
+<h2>See also</h2>
+
+<p>Hofstadter, Douglas R. (1979). "Godel, Escher, Bach: an Eternal Golden Braid". <span class="caps">ISBN</span> 0-465-02656-7. Dialogue 4, "Contracrostipunctus".</p>
+
+<p>Thompson, Ken (1984). "Reflections on trusting trust". Communications of the <span class="caps">ACM. </span><b>27</b> (8): 761–763. doi:<a href="https://dl.acm.org/doi/pdf/10.1145/358198.358210">10.1145/358198.358210</a></p>
+				</div>
+			</content>
+		</entry>
+<entry>
 			<title>I, for one, welcome the &apos;US health care&apos; approach to funding of publishing</title>
 			<link href="https://aitap.github.io/2024/01/21/open-access.html" />
 			<id>https://aitap.github.io/2024/01/21/open-access.html</id> <!-- unique enough -->
