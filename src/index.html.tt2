@@ -4,3 +4,5 @@
 [%~ IF ! a.date ~%][%~ NEXT ~%][%~ END ~%]
 * ["[% a.date %] - [% process_template(a.src).stash.title | html %]":./[% a.dst | url %]]
 [% END %]
+
+p{text-align:right}. By Ivan Krylov
