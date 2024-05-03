@@ -3,7 +3,7 @@
 	<title>Perhaps I should start a blog</title>
 	<link href="https://aitap.github.io/" />
 	<id>https://aitap.github.io/atom.xml</id> <!-- it's an IRI all right -->
-	<updated>2024-05-02T00:00:00Z</updated>
+	<updated>2024-05-03T00:00:00Z</updated>
 	<author>
 		<name>Ivan Krylov</name>
 		<email>krylov.r00t@gmail.com</email>
@@ -75,6 +75,8 @@
 <h2>See also</h2>
 
 <p>Hofstadter, Douglas R. (1979). "Godel, Escher, Bach: an Eternal Golden Braid". <span class="caps">ISBN</span> 0-465-02656-7. Dialogue 4, "Contracrostipunctus".</p>
+
+<p>Rudis, Bob (2024). <a href="https://rud.is/b/2024/05/03/cve-2024-27322-should-never-have-been-assigned-and-r-data-files-are-still-super-risky-even-in-r-4-4-0/"><span class="caps">CVE</span>-2024-27322 Should Never Have Been Assigned And R Data Files Are Still Super Risky Even In R 4.4.0</a></p>
 
 <p>Thompson, Ken (1984). "Reflections on trusting trust". Communications of the <span class="caps">ACM. </span><b>27</b> (8): 761–763. doi:<a href="https://dl.acm.org/doi/pdf/10.1145/358198.358210">10.1145/358198.358210</a></p>
 				</div>
