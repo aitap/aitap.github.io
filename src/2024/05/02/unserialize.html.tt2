@@ -1,4 +1,5 @@
 [% global.title = "Everything you never wanted to know about the R vulnerability" %]
+[% PROCESS macros.tt2 %]
 
 h2. ...but shouldn't be afraid to ask
 
@@ -19,6 +20,42 @@ Read on for exposition, or skip to "plain old data":#subset to find out how to p
 <hr>
 
 h2. Timeō Danaōs et dōna @*.rds@
+
+Here's how the alleged vulnerability works. You read a value from an @*.rds@ file:
+
+[% WRAPPER code, lang => 'R' %]
+x <- readRDS('trapped.rds')
+[% END %]
+
+You want to print the value. Unknowingly to you, the piece of data is of type "promise", so it executes extra code when you evaluate it:
+
+[% WRAPPER code, lang => 'R' %]
+> x
+executing arbitrary code
+[1] 123
+[% END %]
+
+R version 4.4.0 now prohibits direct unserialization of promises; @readRDS()@ would return an error instead. Feeling safer? You shouldn't. Here's how you can recreate this promise yourself:
+
+[% WRAPPER code, lang => 'R' %]
+delayedAssign('x', { cat('executing arbitrary code\n'); 123 })
+[% END %]
+
+And here's two more ways you could save it: as an @*.RData@ file...
+
+[% WRAPPER code, lang => 'R' %]
+save(x, file = 'trapped1.rda', eval.promises = FALSE)
+[% END %]
+
+...or as a promise inside in environment:
+
+[% WRAPPER code, lang => 'R' %]
+e <- new.env()
+delayedAssign('x', { cat('executing arbitrary code\n'); 123 }, e, e)
+saveRDS(e, 'trapped2.rds')
+[% END %]
+
+Now try @load('trapped1.rda'); x@ or @readRDS('trapped2.rds')$x@. But don't feel scared either.
 
 The crux of the matter is that the @*.rds@ and @*.RData@ files that we so conveniently produce and consume using @save()@, @load()@, @saveRDS()@, and @readRDS()@ directly represent internal state of R objects. The code processing these objects has no other option but to trust this state. When you load an object, there is no other source of truth about its contents except the file.
 

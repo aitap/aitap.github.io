@@ -3,7 +3,7 @@
 	<title>Perhaps I should start a blog</title>
 	<link href="https://aitap.github.io/" />
 	<id>https://aitap.github.io/atom.xml</id> <!-- it's an IRI all right -->
-	<updated>2024-05-03T00:00:00Z</updated>
+	<updated>2024-05-11T00:00:00Z</updated>
 	<author>
 		<name>Ivan Krylov</name>
 		<email>krylov.r00t@gmail.com</email>
@@ -37,6 +37,62 @@
 <p><hr /></p>
 
 <h2>Timeō Danaōs et dōna <code>*.rds</code></h2>
+
+<p>Here's how the alleged vulnerability works. You read a value from an <code>*.rds</code> file:</p>
+
+
+
+<pre>
+x <span style="color:#000000">&lt;-</span> <span style="color:#010181">readRDS</span><span style="color:#000000">(</span><span style="color:#bf0303">&apos;trapped.rds&apos;</span><span style="color:#000000">)</span>
+</pre>
+
+
+
+<p>You want to print the value. Unknowingly to you, the piece of data is of type "promise", so it executes extra code when you evaluate it:</p>
+
+
+
+<pre>
+<span style="color:#000000">&gt;</span> x
+executing arbitrary code
+<span style="color:#000000">[</span><span style="color:#b07e00">1</span><span style="color:#000000">]</span> <span style="color:#b07e00">123</span>
+</pre>
+
+
+
+<p>R version 4.4.0 now prohibits direct unserialization of promises; <code>readRDS()</code> would return an error instead. Feeling safer? You shouldn't. Here's how you can recreate this promise yourself:</p>
+
+
+
+<pre>
+<span style="color:#010181">delayedAssign</span><span style="color:#000000">(</span><span style="color:#bf0303">&apos;x&apos;</span><span style="color:#000000">, {</span> <span style="color:#010181">cat</span><span style="color:#000000">(</span><span style="color:#bf0303">&apos;executing arbitrary code</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">);</span> <span style="color:#b07e00">123</span> <span style="color:#000000">})</span>
+</pre>
+
+
+
+<p>And here's two more ways you could save it: as an <code>*.RData</code> file...</p>
+
+
+
+<pre>
+<span style="color:#010181">save</span><span style="color:#000000">(</span>x<span style="color:#000000">,</span> file <span style="color:#000000">=</span> <span style="color:#bf0303">&apos;trapped1.rda&apos;</span><span style="color:#000000">,</span> eval<span style="color:#000000">.</span>promises <span style="color:#000000">=</span> <span style="color:#0057ae">FALSE</span><span style="color:#000000">)</span>
+</pre>
+
+
+
+<p>...or as a promise inside in environment:</p>
+
+
+
+<pre>
+e <span style="color:#000000">&lt;-</span> new<span style="color:#000000">.</span><span style="color:#010181">env</span><span style="color:#000000">()</span>
+<span style="color:#010181">delayedAssign</span><span style="color:#000000">(</span><span style="color:#bf0303">&apos;x&apos;</span><span style="color:#000000">, {</span> <span style="color:#010181">cat</span><span style="color:#000000">(</span><span style="color:#bf0303">&apos;executing arbitrary code</span><span style="color:#ff00ff">\n</span><span style="color:#bf0303">&apos;</span><span style="color:#000000">);</span> <span style="color:#b07e00">123</span> <span style="color:#000000">},</span> e<span style="color:#000000">,</span> e<span style="color:#000000">)</span>
+<span style="color:#010181">saveRDS</span><span style="color:#000000">(</span>e<span style="color:#000000">,</span> <span style="color:#bf0303">&apos;trapped2.rds&apos;</span><span style="color:#000000">)</span>
+</pre>
+
+
+
+<p>Now try <code>load('trapped1.rda'); x</code> or <code>readRDS('trapped2.rds')$x</code>. But don't feel scared either.</p>
 
 <p>The crux of the matter is that the <code>*.rds</code> and <code>*.RData</code> files that we so conveniently produce and consume using <code>save()</code>, <code>load()</code>, <code>saveRDS()</code>, and <code>readRDS()</code> directly represent internal state of R objects. The code processing these objects has no other option but to trust this state. When you load an object, there is no other source of truth about its contents except the file.</p>
 
@@ -536,7 +592,7 @@ linedefs <span style="color:#000000">&lt;-</span> <span style="color:#010181">wi
 
 <p>This is not to say that <span class="caps">CRAN </span>is "better" than <span class="caps">NPM, </span>or R is "better" than JavaScript. Certainly not: what works well for a small group of statisticians has no reason to work well for the much larger worldwide JavaScript community. If anything, <span class="caps">CRAN </span>is <strong>not</strong> without its own problems: despite the median package requiring only 5 total dependencies, heavy tails like <a href="https://cran.r-project.org/package=smartdata">smartdata</a> with 235 required dependencies skew the average towards 20 and the later quantiles towards 60. Tidyverse itself, with 86 total required dependencies, is above 95th quantile by that parameter, but is being heavily advertised as the solution for many things, and it shows as a group of outliers on some of the plots we can make.</p>
 
-<p><strong>See also</strong>: <a href="https://rjournal.github.io/articles/RJ-2023-060/" title="R Journal article">Zhang, Li, &amp; Zhang (2023)</a> give it a more thoughtful formal treatment but from a different perspective. <!-- FIXME: fix the link once the issue actually comes out --></p>
+<p><strong>See also</strong>: <a href="https://journal.r-project.org/articles/RJ-2023-060/" title="R Journal article">Zhang, Li, &amp; Zhang (2023)</a> give it a more thoughtful formal treatment but from a different perspective.</p>
 				</div>
 			</content>
 		</entry>
